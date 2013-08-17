@@ -1,0 +1,192 @@
+<?php
+/**
+ * ProcessWire 'Page Image Manipulator' module
+ *
+ * This module provide basic Imagemanipulations for PageImages or Imagefiles
+ *
+ * ProcessWire 2.x
+ * Copyright (C) 2010 by Ryan Cramer
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ *
+ * http://www.processwire.com
+ * http://www.ryancramer.com
+ *
+ */
+
+
+/*--------------------------------------------------------------------------------------------------
+ $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/PageImageManipulator.module,v $
+ $Id: PageImageManipulator.module,v 1.10 2013/08/16 22:37:36 horst Exp $
+--------------------------------------------------------------------------------------------------*/
+
+class PageImageManipulator extends WireData implements Module, ConfigurableModule {
+
+	static public function getModuleInfo() {
+		return array(
+			'title'      => 'Page Image Manipulator',
+			'version'    => 003,
+			'summary'    => 'This module provide basic Imagemanipulations for PageImages or Imagefiles',
+			'author'     => 'horst',
+			'href'       => 'http://processwire.com/talk/topic/4264-release-page-image-manipulator/',
+			'singular'   => true,
+			'autoload'   => true
+		);
+	}
+
+
+	/**
+	 * Populate default settings
+	 */
+	public function __construct() {
+	}
+
+
+	/**
+	 * Initialize the module and setup hooks
+	 */
+	public function init() {
+		$this->addHook('Pageimage::pimLoad', $this, 'getPageImageManipulator');
+	}
+
+
+	/**
+	 * Return a ready-to-use copy of the ImageManipulator for Pageimages
+	 */
+	public function getPageImageManipulator($event) {
+		$defaultOptions = array(
+			'autoRotation' => true,
+			'upscaling' => true,
+			'cropping' => true,
+			'quality' => 90,
+			'sharpening' => 'soft',
+			'bgcolor' => 127,
+			'targetFilename' => null,
+			'outputFormat' => null
+		);
+		$optionNames = array_keys($defaultOptions);
+		$pageimage = $event->object;
+        $p = pathinfo($pageimage->filename);
+		$prefix = null;
+		$options = null;
+		$override = false;
+		$outputFormat = null;
+		$targetFilename = null;
+		if(count($event->arguments)===1 && is_string($event->arguments[0])) {
+			// we only have the prefix
+			$prefix = $event->arguments[0];
+		}
+		elseif(count($event->arguments)===2 && is_string($event->arguments[0])) {
+			// we have a prefix and a second param
+			$prefix = $event->arguments[0];
+			if(is_bool($event->arguments[1])) {
+				$override = $event->arguments[1];
+			}
+			if(is_array($event->arguments[1])) {
+				$options = array();
+				foreach($event->arguments[1] as $k=>$v) {
+					if(!isset($optionNames[$k])) {
+						continue;
+					}
+					$options["$k"] = $v;
+				}
+			}
+		}
+		elseif(count($event->arguments)===3 && is_string($event->arguments[0])) {
+			// we have the prefix and two other params
+			$prefix = $event->arguments[0];
+			// we let the user pass the arguments in any order he want, so we have to check which is which
+			$bool = is_bool($event->arguments[1]) ? 1 : is_bool($event->arguments[2]) ? 2 : null;
+			$array = is_array($event->arguments[1]) ? 1 : is_array($event->arguments[2]) ? 2 : null;
+            // stick it to the
+			$override = null===$bool ? false : $event->arguments[$bool];
+			if(null!==$array) {
+				$options = array();
+				foreach($event->arguments[$array] as $k=>$v) {
+					if(!isset($optionNames[$k])) {
+						continue;
+					}
+					$options["$k"] = $v;
+				}
+			}
+		}
+
+		if(empty($prefix)) {
+			$prefix = substr(md5($pageimage->filename),0,8);
+		}
+		$prefix = wire('sanitizer')->pageName(trim(trim($prefix),'_'));
+
+        if(!in_array(strtolower($outputFormat), array('gif','png','jpg'))) {
+			$outputFormat = $p['extension'];
+        }
+		$outputFormat = strtolower($outputFormat);
+		if(empty($targetFilename)) {
+			$targetFilename = $p['dirname'] .'/pim_'. $prefix .'_'. $p['filename'] .'.'. $outputFormat;
+		}
+		$options['targetFilename'] = $targetFilename;
+		$options['outputFormat'] = $outputFormat;
+
+		// check if the imagefile already exists
+		if(true!==$override) {
+			$override = file_exists($targetFilename) && is_readable($targetFilename) ? false : true;
+		}
+
+		$options = !is_array($options) ? array() : $options;
+		$configOptions1 = wire('config')->imageSizerOptions;
+		if(!is_array($configOptions1)) $configOptions1 = array();
+		$configOptions2 = wire('config')->imageManipulatorOptions;
+		if(!is_array($configOptions2)) $configOptions2 = array();
+		$options = array_merge($defaultOptions, $configOptions1, $configOptions2, $options);
+
+		// load the ImageManipulator with the PageImage
+		require_once(wire('config')->paths->PageImageManipulator . 'ImageManipulator.class.php');
+		$pim = new ImageManipulator($pageimage, $options, !$override);
+		$event->return = $pim;
+	}
+
+
+
+	/**
+	 * Return a ready-to-use copy of the ImageManipulator to operate with an imagefile
+	 */
+	public function getImageManipulator($filename=null) {
+		require_once(wire('config')->paths->PageImageManipulator . 'ImageManipulator.class.php');
+		$fim = new ImageManipulator($filename);
+		return $fim;
+	}
+
+
+
+
+
+
+
+	/**
+	 * Return an InputfieldsWrapper of Inputfields used to configure the class
+	 *
+	 * @param array $data Array of config values indexed by field name
+	 * @return InputfieldsWrapper
+	 *
+	 */
+	public static function getModuleConfigInputfields(array $data) {
+	}
+
+//	public function __get($key) {
+//	}
+//
+//	public function __set($key, $value) {
+//	}
+
+	/**
+	 * An optional method you may include in your ConfigurableModule to have ProcessWire
+	 * send the configuration data to it rather than populating the properties individually.
+	 *
+	 * @param array $data Array of data in $key => $value format.
+	 *
+	public function setConfigData(array $data);
+	 *
+	 */
+
+
+}
+
+
