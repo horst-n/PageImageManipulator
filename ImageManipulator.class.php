@@ -6,7 +6,7 @@
 * @copyright   -  (c) 2002 - 2013
 * -------------------------------------------------------------------------
 * $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/ImageManipulator.class.php,v $
-* $Id: ImageManipulator.class.php,v 1.13 2013/08/16 23:03:02 horst Exp $
+* $Id: ImageManipulator.class.php,v 1.14 2013/08/17 20:11:19 horst Exp $
 *********************************************************************************************/
 
 
@@ -681,8 +681,8 @@ class ImageManipulator extends Wire {
 
 			return true;
 		}
-		public function save($outputFormat=null) {
-			return $this->pimSave($outputFormat);
+		public function save() {
+			return $this->pimSave(null);
 		}
 
 
@@ -1455,7 +1455,7 @@ class ImageManipulator extends Wire {
 			$ly = imagesy($im);
             $padding = !is_int($padding) || $padding<0 || $padding>25 ? 2 : $padding;
             $padding = $lx > $ly ? intval($ly / 100 * $padding) : intval($lx / 100 * $padding);
-            $size = !is_int($size) || $size<1 || $size>100 ? 10 : $size;
+            $size = !is_int($size) || $size<1 || $size>300 ? 10 : $size;
 			$position = !is_string($position) || (!in_array(strtolower($position), $this->positioningValues) && !in_array(strtolower($position), array_keys($this->positioningValues))) ? 'center' : strtolower($position);
 			$opacity = !is_int($opacity) || $opacity<1 || $opacity>100 ? 70 : $opacity;
 
