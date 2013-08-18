@@ -23,11 +23,11 @@ class PageImageManipulator extends WireData implements Module, ConfigurableModul
 
 	static public function getModuleInfo() {
 		return array(
-			'title'      => 'Page Image Manipulator',
-			'version'    => 004,
-			'summary'    => 'This module provide basic Imagemanipulations for PageImages or Imagefiles',
-			'author'     => 'horst',
-			'href'       => 'http://mods.pw/5E',
+			'title'	  => 'Page Image Manipulator',
+			'version'	=> 004,
+			'summary'	=> 'This module provide basic Imagemanipulations for PageImages or Imagefiles',
+			'author'	 => 'horst',
+			'href'	   => 'http://mods.pw/5E',
 			'singular'   => true,
 			'autoload'   => true
 		);
@@ -65,7 +65,7 @@ class PageImageManipulator extends WireData implements Module, ConfigurableModul
 		);
 		$optionNames = array_keys($defaultOptions);
 		$pageimage = $event->object;
-        $p = pathinfo($pageimage->filename);
+		$p = pathinfo($pageimage->filename);
 		$prefix = null;
 		$options = null;
 		$override = false;
@@ -97,7 +97,7 @@ class PageImageManipulator extends WireData implements Module, ConfigurableModul
 			// we let the user pass the arguments in any order he want, so we have to check which is which
 			$bool = is_bool($event->arguments[1]) ? 1 : is_bool($event->arguments[2]) ? 2 : null;
 			$array = is_array($event->arguments[1]) ? 1 : is_array($event->arguments[2]) ? 2 : null;
-            // stick it to the
+			// stick it to the
 			$override = null===$bool ? false : $event->arguments[$bool];
 			if(null!==$array) {
 				$options = array();
@@ -115,9 +115,9 @@ class PageImageManipulator extends WireData implements Module, ConfigurableModul
 		}
 		$prefix = wire('sanitizer')->pageName(trim(trim($prefix),'_'));
 
-        if(!in_array(strtolower($outputFormat), array('gif','png','jpg'))) {
+		if(!in_array(strtolower($outputFormat), array('gif','png','jpg'))) {
 			$outputFormat = $p['extension'];
-        }
+		}
 		$outputFormat = strtolower($outputFormat);
 		if(empty($targetFilename)) {
 			$targetFilename = $p['dirname'] .'/pim_'. $prefix .'_'. $p['filename'] .'.'. $outputFormat;
