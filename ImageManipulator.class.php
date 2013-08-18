@@ -2,7 +2,7 @@
 /********************************************************************************************
 * @script_type -  PHP ProcessWire Class ImageManipulator
 * -------------------------------------------------------------------------
-* @author      -  Horst Nogajski <info@nogajski.de>
+* @author	  -  Horst Nogajski <info@nogajski.de>
 * @copyright   -  (c) 2002 - 2013
 * -------------------------------------------------------------------------
 * $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/ImageManipulator.class.php,v $
@@ -66,9 +66,9 @@ class ImageManipulator extends Wire {
 		*/
 		protected $cropping = true;
 
-	    /**
+		/**
 	 	* enable auto_rotation according to EXIF-Orientation-Flag
-	    */
+		*/
 		protected $autoRotation = true;
 
 		/**
@@ -88,13 +88,13 @@ class ImageManipulator extends Wire {
 		*/
 		protected $outputFormat;
 
-        /**
-        * optional color array Red,Green,Blue for BG-Color (0-255) 0,0,0 = black | 255,255,255 = white | 255,0,0 = red
-        */
+		/**
+		* optional color array Red,Green,Blue for BG-Color (0-255) 0,0,0 = black | 255,255,255 = white | 255,0,0 = red
+		*/
 		protected $bgcolor = array(0,0,0);
 
 
-    // other properties
+	// other properties
 
 		/**
 		* Supported image types (@teppo)
@@ -111,20 +111,20 @@ class ImageManipulator extends Wire {
 		* width 3 additions: targetFilename and outputFormat
 		*
 		*  - targetFilename is needed because we don't want to overwrite the original Imagefile
-		*       there are two exceptions:
-		*       1) if you have allready created a variation and have passed that to the ImageManipulator
-		*          than a targetFilename is not needed.
-		*          (we check reference '$image->original' to know about that)
-		*       2) using the static function fileAutoRotation, because this is mainly implemented
-		*          for correcting an original imagefile on upload! So a file gets uploaded only one
-		*          time and only then we may apply rotation to the original image.
+		*	   there are two exceptions:
+		*	   1) if you have allready created a variation and have passed that to the ImageManipulator
+		*		  than a targetFilename is not needed.
+		*		  (we check reference '$image->original' to know about that)
+		*	   2) using the static function fileAutoRotation, because this is mainly implemented
+		*		  for correcting an original imagefile on upload! So a file gets uploaded only one
+		*		  time and only then we may apply rotation to the original image.
 		*
 		*  - outputFormat is optional and only should give ability to
-		*       import for example a JPEG, do something with fancy masking and
-		*       save it to PNG-Format with alpha transparency.
+		*	   import for example a JPEG, do something with fancy masking and
+		*	   save it to PNG-Format with alpha transparency.
 		*
 		*  - bgcolor may be used when wrapping borders around an image or create Thumbnails like Slides
-		*       (squares with landscapes or portraits in it)
+		*	   (squares with landscapes or portraits in it)
 		*
 		*/
 		protected $optionNames = array(
@@ -162,7 +162,7 @@ class ImageManipulator extends Wire {
 
 		private $bypassOperations = false;
 
-		private $imDibDst = null;	    // is the output for every intermediate im-method!
+		private $imDibDst = null;		// is the output for every intermediate im-method!
 
 
 
@@ -274,13 +274,13 @@ class ImageManipulator extends Wire {
 			// width, height, and more infos
 			$types = array(1=>'gif',2=>'jpg',3=>'png');
 			$this->image = array(
-				'type'        => $types[$info[2]],
+				'type'		=> $types[$info[2]],
 				'imageType'   => $info[2],
-				'mimetype'    => isset($info['mime']) ? $info['mime'] : @image_type_to_mime_type($info[2]),
-				'width'       => $info[0],
-				'height'      => $info[1],
+				'mimetype'	=> isset($info['mime']) ? $info['mime'] : @image_type_to_mime_type($info[2]),
+				'width'	   => $info[0],
+				'height'	  => $info[1],
 				'landscape'   => (bool)($info[0]>$info[1]),
-				'ratio'       => floatval(($info[0]>=$info[1] ? $info[0]/$info[1] : $info[1]/$info[2]))
+				'ratio'	   => floatval(($info[0]>=$info[1] ? $info[0]/$info[1] : $info[1]/$info[2]))
 			);
 
 			// try to read EXIF-Orientation-Flag
@@ -321,9 +321,9 @@ class ImageManipulator extends Wire {
 			return true;
 		}
 
-	    /**
-	    * horst: this one I use since 2005, - I think I have found it somewhere in the FPDF-Project (GPL) !
-	    */
+		/**
+		* horst: this one I use since 2005, - I think I have found it somewhere in the FPDF-Project (GPL) !
+		*/
 		private function extendedInfoPng(&$a) {
 			$f=@fopen($this->filename,'rb');
 			if($f===FALSE)
@@ -363,7 +363,7 @@ class ImageManipulator extends Wire {
 			else{
 				$a['channels'] = $ct;
 				$a['colspace'] = 'DeviceRGB';
-				$a['alpha']    = true;
+				$a['alpha']	= true;
 			}
 
 			if(ord(@fread($f,1))!=0)
@@ -570,9 +570,9 @@ class ImageManipulator extends Wire {
 		public function getBgcolor() 					{ return $this->getOptions( 'bgcolor' ); }
 
 
-        public function getImageInfo() {
+		public function getImageInfo() {
 			return $this->image;
-        }
+		}
 
 
 
@@ -696,7 +696,7 @@ class ImageManipulator extends Wire {
 		}
 
 
-        public function removePimVariations() {
+		public function removePimVariations() {
 			if('page'!==$this->entryItem) {
 				return $this;
 			}
@@ -714,7 +714,7 @@ class ImageManipulator extends Wire {
 					@unlink($directory . $file->getFilename());
 				}
 			}
-       }
+	   }
 
 
 
@@ -724,15 +724,15 @@ class ImageManipulator extends Wire {
 		private function imLoad() {
 			if($this->bypassOperations) return;
 			if(!isset($this->dibIsLoaded) || $this->dibIsLoaded!==true) {
-		        $this->imDibDst = @imagecreatefromstring( file_get_contents($this->filename) );
-		        $this->dibIsLoaded = $this->isResourceGd($this->imDibDst);
+				$this->imDibDst = @imagecreatefromstring( file_get_contents($this->filename) );
+				$this->dibIsLoaded = $this->isResourceGd($this->imDibDst);
 				if($this->dibIsLoaded!==true) {
 					return false;
 				}
 				// if we have a GIF, we store transparentColorIndex
 				if($this->imageType == IMAGETYPE_GIF) {
 					// @mrx GIF transparency
-	        		$transparentIndex = ImageColorTransparent($this->imDibDst);
+					$transparentIndex = ImageColorTransparent($this->imDibDst);
 					$this->GifTransparentColor = $transparentIndex != -1 ? ImageColorsForIndex($this->imDibDst, $transparentIndex) : 0;
 				}
 			}
@@ -1105,7 +1105,7 @@ class ImageManipulator extends Wire {
 			if(is_array($anyColor) && count($anyColor)==4 ) {
 				// we have RGB-A value
 				$alpha = intval(array_pop($anyColor));
-        		$rgb = $anyColor;
+				$rgb = $anyColor;
 			}
 			elseif(is_array($anyColor) && count($anyColor)==3 ) {
 				$rgb = $anyColor;
@@ -1283,15 +1283,15 @@ class ImageManipulator extends Wire {
 		* this method shrinks a big watermarkLogo to fit into the sourcefile
 		* small Logos can be positioned:
 		*
-		*     NW - N - NE
-		*     |    |    |
-		*     W  - C -  E
-		*     |    |    |
-		*     SW - S - SE
+		*	 NW - N - NE
+		*	 |	|	|
+		*	 W  - C -  E
+		*	 |	|	|
+		*	 SW - S - SE
 		*
 		* @param mixed $pngAlphaImage  can be a Filename or a PageImage
-		* @param mixed $position       is one out of: N, E, S, W, C, NE, SE, SW, NW, - or: north, east, south, west, center, northeast, southeast, southwest, northwest
-		* @param mixed $padding        is padding to the borders in percent! default is 5 (%)
+		* @param mixed $position	   is one out of: N, E, S, W, C, NE, SE, SW, NW, - or: north, east, south, west, center, northeast, southeast, southwest, northwest
+		* @param mixed $padding		is padding to the borders in percent! default is 5 (%)
 		*/
 		public function watermarkLogo($pngAlphaImage, $position='center', $padding=2) {
 			if($this->bypassOperations) {
@@ -1334,59 +1334,59 @@ class ImageManipulator extends Wire {
 			}
 			@imagedestroy($wm);
 
-            // now with positioning of small watermarks
+			// now with positioning of small watermarks
 			$position = !is_string($position) || (!in_array(strtolower($position), $this->positioningValues) && !in_array(strtolower($position), array_keys($this->positioningValues))) ? 'center' : strtolower($position);
-            $posX = intval(($sourcefile_width - $watermarkfile_width_new) / 2);
-            $posY = intval(($sourcefile_height - $watermarkfile_height_new) / 2);
-            if('center'!=$position && 'c'!=$position) {
-            	$padding = !is_int($padding) || $padding<0 || $padding>25 ? 2 : $padding;
-            	$padding = $sourcefile_width > $sourcefile_height ? intval($sourcefile_height / 100 * $padding) : intval($sourcefile_width / 100 * $padding);
+			$posX = intval(($sourcefile_width - $watermarkfile_width_new) / 2);
+			$posY = intval(($sourcefile_height - $watermarkfile_height_new) / 2);
+			if('center'!=$position && 'c'!=$position) {
+				$padding = !is_int($padding) || $padding<0 || $padding>25 ? 2 : $padding;
+				$padding = $sourcefile_width > $sourcefile_height ? intval($sourcefile_height / 100 * $padding) : intval($sourcefile_width / 100 * $padding);
 				switch($position) {
 					case 'n':
 					case 'north':
-			            $posX = intval(($sourcefile_width - $watermarkfile_width_new) / 2);
-			            $posY = $padding;
+						$posX = intval(($sourcefile_width - $watermarkfile_width_new) / 2);
+						$posY = $padding;
 						break;
 					case 's':
 					case 'south':
-			            $posX = intval(($sourcefile_width - $watermarkfile_width_new) / 2);
-			            $posY = intval(($sourcefile_height - $watermarkfile_height_new) - $padding);
+						$posX = intval(($sourcefile_width - $watermarkfile_width_new) / 2);
+						$posY = intval(($sourcefile_height - $watermarkfile_height_new) - $padding);
 						break;
 
 					case 'w':
 					case 'west':
-			            $posX = $padding;
-			            $posY = intval(($sourcefile_height - $watermarkfile_height_new) / 2);
+						$posX = $padding;
+						$posY = intval(($sourcefile_height - $watermarkfile_height_new) / 2);
 						break;
 					case 'e':
 					case 'east':
-			            $posX = intval($sourcefile_width - $watermarkfile_width_new - $padding);
-			            $posY = intval(($sourcefile_height - $watermarkfile_height_new) / 2);
+						$posX = intval($sourcefile_width - $watermarkfile_width_new - $padding);
+						$posY = intval(($sourcefile_height - $watermarkfile_height_new) / 2);
 						break;
 
 					case 'nw':
 					case 'northwest':
-			            $posX = $padding;
-			            $posY = $padding;
+						$posX = $padding;
+						$posY = $padding;
 						break;
 					case 'ne':
 					case 'northeast':
-			            $posX = intval($sourcefile_width - $watermarkfile_width_new - $padding);
-			            $posY = $padding;
+						$posX = intval($sourcefile_width - $watermarkfile_width_new - $padding);
+						$posY = $padding;
 						break;
 
 					case 'sw':
 					case 'southwest':
-			            $posX = $padding;
-			            $posY = intval(($sourcefile_height - $watermarkfile_height_new) - $padding);
+						$posX = $padding;
+						$posY = intval(($sourcefile_height - $watermarkfile_height_new) - $padding);
 						break;
 					case 'se':
 					case 'southeast':
-			            $posX = intval($sourcefile_width - $watermarkfile_width_new - $padding);
-			            $posY = intval(($sourcefile_height - $watermarkfile_height_new) - $padding);
+						$posX = intval($sourcefile_width - $watermarkfile_width_new - $padding);
+						$posY = intval(($sourcefile_height - $watermarkfile_height_new) - $padding);
 						break;
 				}
-            }
+			}
 			$res = imagecopy($im, $wm2, $posX, $posY, 0, 0, $watermarkfile_width_new, $watermarkfile_height_new);
 			@imagedestroy($wm2);
 			if(!$res || !$this->isResourceGd($im)) {
@@ -1453,9 +1453,9 @@ class ImageManipulator extends Wire {
 
 			$lx = imagesx($im);
 			$ly = imagesy($im);
-            $padding = !is_int($padding) || $padding<0 || $padding>25 ? 2 : $padding;
-            $padding = $lx > $ly ? intval($ly / 100 * $padding) : intval($lx / 100 * $padding);
-            $size = !is_int($size) || $size<1 || $size>300 ? 10 : $size;
+			$padding = !is_int($padding) || $padding<0 || $padding>25 ? 2 : $padding;
+			$padding = $lx > $ly ? intval($ly / 100 * $padding) : intval($lx / 100 * $padding);
+			$size = !is_int($size) || $size<1 || $size>300 ? 10 : $size;
 			$position = !is_string($position) || (!in_array(strtolower($position), $this->positioningValues) && !in_array(strtolower($position), array_keys($this->positioningValues))) ? 'center' : strtolower($position);
 			$opacity = !is_int($opacity) || $opacity<1 || $opacity>100 ? 70 : $opacity;
 
@@ -1479,58 +1479,58 @@ class ImageManipulator extends Wire {
 			switch($position) {
 				case 'nw':
 				case 'northwest':
-			        $posX = $padding;
-			        $posY = $padding + $height;
+					$posX = $padding;
+					$posY = $padding + $height;
 					break;
 
 				case 'n':
 				case 'north':
-			        $posX = intval(($lx - $width) / 2);
-			        $posY = $padding + $height;
+					$posX = intval(($lx - $width) / 2);
+					$posY = $padding + $height;
 					break;
 
 				case 'ne':
 				case 'northeast':
-			        $posX = intval($lx - $width - $padding);
-			        $posY = $padding + $height;
+					$posX = intval($lx - $width - $padding);
+					$posY = $padding + $height;
 					break;
 
 
 				case 'w':
 				case 'west':
-			        $posX = $padding;
-			        $posY = intval($ly / 2);
+					$posX = $padding;
+					$posY = intval($ly / 2);
 					break;
 
 				case 'e':
 				case 'east':
-			        $posX = intval($lx - $width - $padding);
-			        $posY = intval($ly / 2);
+					$posX = intval($lx - $width - $padding);
+					$posY = intval($ly / 2);
 					break;
 
 
 				case 'sw':
 				case 'southwest':
-			        $posX = $padding;
-			        $posY = $ly - $padding;
+					$posX = $padding;
+					$posY = $ly - $padding;
 					break;
 
 				case 's':
 				case 'south':
-			        $posX = intval(($lx - $width) / 2);
-			        $posY = $ly - $padding;
+					$posX = intval(($lx - $width) / 2);
+					$posY = $ly - $padding;
 					break;
 
 				case 'se':
 				case 'southeast':
-			        $posX = intval($lx - $width - $padding);
-			        $posY = $ly - $padding;
+					$posX = intval($lx - $width - $padding);
+					$posY = $ly - $padding;
 					break;
 
 
 				default:
-		            $posX = intval(($lx - $width) / 2);
-		            $posY = intval($ly / 2);
+					$posX = intval(($lx - $width) / 2);
+					$posY = intval($ly / 2);
 			}
 
 			// analyse original image
@@ -1691,19 +1691,19 @@ class ImageManipulator extends Wire {
 				$fim->release();
 				return false;
 			}
-            $res = $fim->save($filename);
+			$res = $fim->save($filename);
 			return $res===$filename;
 		}
 
 
 		public static function fileThumbnailModule($sourcePath, $targetPath, $cropX, $cropY, $cropW, $cropH, $targetWidth, $targetHeight, $quality=90, $sharpenMode='soft') {
 			$options = array('quality'=>$quality, 'targetFilename'=>$targetPath);
-            $pim = new ImageManipulator($sourcePath, $options);
+			$pim = new ImageManipulator($sourcePath, $options);
 
-            if(false===$pim->crop($cropX, $cropY, $cropW, $cropH)) {
+			if(false===$pim->crop($cropX, $cropY, $cropW, $cropH)) {
 				throw new WireException("Error when trying to crop ThumbnailFile.");
 				return false;
-            }
+			}
 			if('multistep'==$sharpenMode) {
 				if(false===$pim->stepResize($targetWidth, $targetHeight)) {
 					throw new WireException("Error when trying stepResize ThumbnailFile.");
@@ -1739,7 +1739,7 @@ class ImageManipulator extends Wire {
 			if($p['extension']!=$outputFormat) {
 				$a = array_keys($this->supportedImageTypes);
 				if(in_array($outputFormat, $a)) {
-                    // we adjust the filename according to the outputFormat what is already set
+					// we adjust the filename according to the outputFormat what is already set
 					$targetFilename = $p['dirname'] .'/'. $p['filename'] .'.'. $outputFormat;
 				}
 				elseif(in_array(strtolower($p['extension']), $a)) {
@@ -1760,11 +1760,11 @@ class ImageManipulator extends Wire {
 		 * All rights reserved.
 		 *
 		 * @category   Library
-		 * @package    Lotos
+		 * @package	Lotos
 		 * @subpackage Imaging
 		 * @copyright  Copyright (c) 2005-2011 Artur Graniszewski (aargoth@boo.pl)
-		 * @license    GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June 2007
-		 * @version    1.7.1
+		 * @license	GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June 2007
+		 * @version	1.7.1
 		 *
 		 *
 		 * @param int $channels Channels to draw, possibilities: Channel::RGB (default), Channel::RED, Channel::GREEN, Channel::BLUE
@@ -1786,7 +1786,7 @@ class ImageManipulator extends Wire {
 			return $data;
 		}
 
-        private function sanitizeColor($value) {
+		private function sanitizeColor($value) {
 			if( is_array($value) && count($value)==3 ) {
 				$tmp = array_values($value);
 				$color = array();
@@ -1829,11 +1829,11 @@ class ImageManipulator extends Wire {
 				}
 			}
 			return $color;
-        }
+		}
 
-	    /**
-	    * helper, reads a 4-byte integer from file, (also from FPDF-Project)
-	    */
+		/**
+		* helper, reads a 4-byte integer from file, (also from FPDF-Project)
+		*/
 		private function freadint(&$f) {
 			$i=ord(@fread($f,1))<<24;
 			$i+=ord(@fread($f,1))<<16;
@@ -1884,13 +1884,13 @@ class ImageManipulator extends Wire {
 			}
 		}
 
-	    /**
-	    * makes protected and private class-properties accessible in ReadOnly mode
-	    *
-	    * example:   $x = $class->propertyname;
-	    *
-	    * @param mixed $property_name
-	    */
+		/**
+		* makes protected and private class-properties accessible in ReadOnly mode
+		*
+		* example:   $x = $class->propertyname;
+		*
+		* @param mixed $property_name
+		*/
 		public function __get($propertyName) {
 			if(in_array($propertyName, $this->propertyNames) && ! in_array($propertyName, array('imDibDst','imDibTmp'))) {
 				return $this->$propertyName;
