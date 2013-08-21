@@ -6,7 +6,7 @@
 * @copyright   -  (c) 2002 - 2013
 * -------------------------------------------------------------------------
 * $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/ImageManipulator.class.php,v $
-* $Id: ImageManipulator.class.php,v 1.21 2013/08/21 01:33:11 horst Exp $
+* $Id: ImageManipulator.class.php,v 1.22 2013/08/21 23:13:16 horst Exp $
 *********************************************************************************************/
 
 ###  $string = 'some';
@@ -1950,6 +1950,19 @@ class ImageManipulator extends Wire {
 			$options = array('quality'=>$quality, 'targetFilename'=>$targetPath);
 			$pim = new ImageManipulator($sourcePath, $options);
 
+			// user has clicked on button Crop&Go, but has not drawn the rectangle with cropping values!!
+			if($cropW==0 || $cropH==0) {
+				$w = $pim->image['width'];
+				$h = $pim->image['height'];
+				$cropW = $targetWidth;
+				$cropH = $targetHeight;
+				$calc = new hn_SizeCalc();
+				$calc->up($cropW, $cropH, $w, $h);
+				unset($calc);
+				$cropX = intval(($w - $cropW) / 2);
+				$cropY = intval(($h - $cropH) / 2);
+			}
+
 			if(false===$pim->crop($cropX, $cropY, $cropW, $cropH)) {
 				throw new WireException("Error when trying to crop ThumbnailFile.");
 				return false;
@@ -1961,6 +1974,9 @@ class ImageManipulator extends Wire {
 				}
 			}
 			else {
+				if(!in_array($sharpenMode,array('soft','medium','strong'))) {
+					$sharpenMode = in_array($pim->getSharpening(),array('soft','medium','strong')) ? $pim->getSharpening() : 'soft';
+				}
 				if(false===$pim->resize($targetWidth, $targetHeight, true, $sharpenMode)) {
 					throw new WireException("Error when trying to resize ThumbnailFile.");
 					return false;
