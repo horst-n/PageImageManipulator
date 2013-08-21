@@ -6,7 +6,7 @@
 * @copyright   -  (c) 2002 - 2013
 * -------------------------------------------------------------------------
 * $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/ImageManipulator.class.php,v $
-* $Id: ImageManipulator.class.php,v 1.19 2013/08/21 01:13:56 horst Exp $
+* $Id: ImageManipulator.class.php,v 1.21 2013/08/21 01:33:11 horst Exp $
 *********************************************************************************************/
 
 ###  $string = 'some';
@@ -1802,12 +1802,12 @@ class ImageManipulator extends Wire {
 			$imHeight = imagesy($im);
 			$padding = !is_int($padding) || $padding<0 || $padding>25 ? 0 : $padding;
 			$padding = $imWidth > $imHeight ? intval($imHeight / 100 * $padding) : intval($imWidth / 100 * $padding);
-            $imWidthNew = imagesx($im);
+			$imWidthNew = imagesx($im);
 			$imHeightNew = imagesy($im);
 			$calc = new hn_SizeCalc();
 			$calc->down($imWidthNew, $imHeightNew, $width - $padding, $height - $padding);
 			unset($calc);
-            if($imWidthNew!=$imWidth || $imHeightNew!=$imHeight) {
+			if($imWidthNew!=$imWidth || $imHeightNew!=$imHeight) {
 				$im2 = $this->createTruecolor($imWidthNew, $imHeightNew);
 				if(!@imagecopyresampled($im2, $im, 0, 0, 0, 0, $imWidthNew, $imHeightNew, $imWidth, $imHeight)) {
 					throw new WireException("Error when trying to resize watermarkLogo to fit to the MemoryImage.");
@@ -1816,13 +1816,13 @@ class ImageManipulator extends Wire {
 				$im = $this->createTruecolor($imWidthNew, $imHeightNew);
 				@imagecopy($im, $im2, 0, 0, 0, 0, $imWidthNew, $imHeightNew);
 				@imagedestroy($im2);
-            }
-            $canvas = $this->createTruecolor($width, $height);
+			}
+			$canvas = $this->createTruecolor($width, $height);
 			@imagealphablending($canvas, true);
-            $bg1 = imagecolorallocate($canvas, 255,255,255);
-            @imagefilledrectangle($canvas, 0, 0, $width, $height, $bg1);
-            $bg = count($bgcolor)==4 ? imagecolorallocatealpha($canvas, $bgcolor[0], $bgcolor[1], $bgcolor[2], $bgcolor[3]) : imagecolorallocate($canvas, $bgcolor[0], $bgcolor[1], $bgcolor[2]);
-            @imagefilledrectangle($canvas, 0, 0, $width, $height, $bg);
+			$bg1 = imagecolorallocate($canvas, 255,255,255);
+			@imagefilledrectangle($canvas, 0, 0, $width, $height, $bg1);
+			$bg = count($bgcolor)==4 ? imagecolorallocatealpha($canvas, $bgcolor[0], $bgcolor[1], $bgcolor[2], $bgcolor[3]) : imagecolorallocate($canvas, $bgcolor[0], $bgcolor[1], $bgcolor[2]);
+			@imagefilledrectangle($canvas, 0, 0, $width, $height, $bg);
 			@imagealphablending($canvas, true);
 			@imagesavealpha($canvas, true);
 			switch($position) {
