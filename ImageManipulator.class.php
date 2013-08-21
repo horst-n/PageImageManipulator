@@ -6,14 +6,11 @@
 * @copyright   -  (c) 2002 - 2013
 * -------------------------------------------------------------------------
 * $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/ImageManipulator.class.php,v $
-* $Id: ImageManipulator.class.php,v 1.18 2013/08/21 01:09:53 horst Exp $
+* $Id: ImageManipulator.class.php,v 1.19 2013/08/21 01:13:56 horst Exp $
 *********************************************************************************************/
 
-
-###   $string = 'some';
-###   sprintf($this->_('Text that can be translated including %s dynamic parts.'), $string)   ###
-
-
+###  $string = 'some';
+###  sprintf($this->_('Text that can be translated including %s dynamic parts.'), $string)   ###
 
 class ImageManipulator extends Wire {
 
