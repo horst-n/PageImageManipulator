@@ -19,3 +19,26 @@ You may also want to get rid of all variations at once? Than you can call $pagei
 
 A complete list of all methods and actions can be found here: http://processwire.com/talk/topic/4264-release-page-image-manipulator/
 
+
+
+### Version history
+
+#### 0.0.8 
+
++ added enhanced support for Thumbnails module, including permanent storage for CropRectangleCoords and params
++ fixed / rewritten all bg-color stuff to support rgba alpha channel
++ fixed a E-Notice with IPTC prepare
++ changed the params of method resize, width, height to be the same like in new ImageSizer, ($sharpen can have value 'none') Sorry for breaking compatibility!
+
+#### 0.0.5 
+
++ added method canvas
++ added method unsharpMask
+
+#### 0.0.4
+
++ added method watermarkText
+
+#### 0.0.3
+
++ added support for positioning the watermark in method watermarkLogo
