@@ -16,16 +16,16 @@
 
 /*--------------------------------------------------------------------------------------------------
  $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/PageImageManipulator.module,v $
- $Id: PageImageManipulator.module,v 1.15 2013/08/21 23:13:50 horst Exp $
+ $Id: PageImageManipulator.module,v 1.18 2013/08/26 22:49:06 horst Exp $
 --------------------------------------------------------------------------------------------------*/
 
-class PageImageManipulator extends WireData implements Module { //}, ConfigurableModule {
+class PageImageManipulator extends WireData implements Module {        // ConfigurableModule
 
 	static public function getModuleInfo() {
 		return array(
 			'title'		=> 'Page Image Manipulator',
-			'version'	=> 006,
-			'summary'	=> 'This module provide basic Imagemanipulations for PageImages or Imagefiles',
+			'version'	=> 8,
+			'summary'	=> 'This module provide basic Imagemanipulations for Pageimages and Imagefiles',
 			'author'	=> 'horst',
 			'href'		=> 'http://mods.pw/5E',
 			'singular'	=> true,
@@ -34,10 +34,26 @@ class PageImageManipulator extends WireData implements Module { //}, Configurabl
 	}
 
 
+	private $defaultOptions = array(
+		'autoRotation' => true,
+		'upscaling' => true,
+		'cropping' => true,
+		'quality' => 90,
+		'sharpening' => 'soft',
+		'bgcolor' => 127,
+		'targetFilename' => null,
+		'outputFormat' => null,
+		'thumbnailCoordsPermanent' => true
+	);
+	private $optionNames;
+
+
+
 	/**
 	 * Populate default settings
 	 */
 	public function __construct() {
+		$this->optionNames = array_keys($this->defaultOptions);
 	}
 
 
@@ -53,17 +69,6 @@ class PageImageManipulator extends WireData implements Module { //}, Configurabl
 	 * Return a ready-to-use copy of the ImageManipulator for Pageimages
 	 */
 	public function getPageImageManipulator($event) {
-		$defaultOptions = array(
-			'autoRotation' => true,
-			'upscaling' => true,
-			'cropping' => true,
-			'quality' => 90,
-			'sharpening' => 'soft',
-			'bgcolor' => 127,
-			'targetFilename' => null,
-			'outputFormat' => null
-		);
-		$optionNames = array_keys($defaultOptions);
 		$pageimage = $event->object;
 		$p = pathinfo($pageimage->filename);
 		$prefix = null;
@@ -84,10 +89,9 @@ class PageImageManipulator extends WireData implements Module { //}, Configurabl
 			if(is_array($event->arguments[1])) {
 				$options = array();
 				foreach($event->arguments[1] as $k=>$v) {
-					if(!isset($optionNames[$k])) {
-						continue;
+					if(in_array($k, $this->optionNames)) {
+						$options["$k"] = $v;
 					}
-					$options["$k"] = $v;
 				}
 			}
 		}
@@ -102,10 +106,9 @@ class PageImageManipulator extends WireData implements Module { //}, Configurabl
 			if(null!==$array) {
 				$options = array();
 				foreach($event->arguments[$array] as $k=>$v) {
-					if(!isset($optionNames[$k])) {
-						continue;
+					if(in_array($k, $this->optionNames)) {
+						$options["$k"] = $v;
 					}
-					$options["$k"] = $v;
 				}
 			}
 		}
@@ -128,14 +131,9 @@ class PageImageManipulator extends WireData implements Module { //}, Configurabl
 			$override = file_exists($targetFilename) && is_readable($targetFilename) ? false : true;
 		}
 
-		$options = !is_array($options) ? array() : $options;
+		$options = is_array($options) ? $options : array();
 		$options['targetFilename'] = $targetFilename;
 		$options['outputFormat'] = $outputFormat;
-		$configOptions1 = wire('config')->imageSizerOptions;
-		if(!is_array($configOptions1)) $configOptions1 = array();
-		$configOptions2 = wire('config')->imageManipulatorOptions;
-		if(!is_array($configOptions2)) $configOptions2 = array();
-		$options = array_merge($defaultOptions, $configOptions1, $configOptions2, $options);
 
 		// load the ImageManipulator with the PageImage
 		require_once(wire('config')->paths->PageImageManipulator . 'ImageManipulator.class.php');
@@ -146,35 +144,10 @@ class PageImageManipulator extends WireData implements Module { //}, Configurabl
 
 
 	/**
-	 * Return a ready-to-use copy of the ImageManipulator to operate with an imagefile
+	 * Return a ready-to-use (empty) copy of the ImageManipulator or one to operate with an imagefile
 	 */
 	public function imLoad($filename=null, $options=null) {
-		$defaultOptions = array(
-			'autoRotation' => true,
-			'upscaling' => true,
-			'cropping' => true,
-			'quality' => 90,
-			'sharpening' => 'soft',
-			'bgcolor' => 127,
-			'targetFilename' => null,
-			'outputFormat' => null
-		);
-		$optionNames = array_keys($defaultOptions);
-		$tmp = !is_array($options) ? array() : $options;
-		$options = array();
-		foreach($tmp as $k=>$v) {
-			if(!isset($optionNames[$k])) {
-				continue;
-			}
-			$options["$k"] = $v;
-		}
-		$configOptions1 = wire('config')->imageSizerOptions;
-		if(!is_array($configOptions1)) $configOptions1 = array();
-		$configOptions2 = wire('config')->imageManipulatorOptions;
-		if(!is_array($configOptions2)) $configOptions2 = array();
-		$options = array_merge($defaultOptions, $configOptions1, $configOptions2, $options);
-
-		// load the ImageManipulator with the PageImage
+		// load the ImageManipulator with an imagefile or empty
 		require_once(wire('config')->paths->PageImageManipulator . 'ImageManipulator.class.php');
 		$fim = new ImageManipulator($filename, $options, false);
 		return $fim;

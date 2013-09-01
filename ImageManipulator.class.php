@@ -2,17 +2,19 @@
 /********************************************************************************************
 * @script_type -  PHP ProcessWire Class ImageManipulator
 * -------------------------------------------------------------------------
-* @author	  -  Horst Nogajski <info@nogajski.de>
-* @copyright   -  (c) 2002 - 2013
+* @author      -  Horst Nogajski  --  info at nogajski . de
 * -------------------------------------------------------------------------
 * $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/ImageManipulator.class.php,v $
-* $Id: ImageManipulator.class.php,v 1.22 2013/08/21 23:13:16 horst Exp $
+* $Id: ImageManipulator.class.php,v 1.34 2013/09/01 18:16:09 horst Exp $
 *********************************************************************************************/
 
 ###  $string = 'some';
 ###  sprintf($this->_('Text that can be translated including %s dynamic parts.'), $string)   ###
 
 class ImageManipulator extends Wire {
+
+    // must be identical with the module version
+		protected $version = 8;
 
 	// information of source imagefile
 
@@ -86,9 +88,11 @@ class ImageManipulator extends Wire {
 		protected $outputFormat;
 
 		/**
-		* optional color array Red,Green,Blue for BG-Color (0-255) 0,0,0 = black | 255,255,255 = white | 255,0,0 = red
+		* color array rgb (or optional rgba) for BG-Color (0-255) 0,0,0 = black | 255,255,255 = white | 255,0,0 = red
 		*/
-		protected $bgcolor = array(0,0,0);
+		protected $bgcolor = array(255, 255, 255, 0);
+
+		protected $thumbnailColorizeCustom = array(0, 0, 0);
 
 
 	// other properties
@@ -132,7 +136,22 @@ class ImageManipulator extends Wire {
 			'sharpening',
 			'bgcolor',
 			'targetFilename',
-			'outputFormat'
+			'outputFormat',
+			'thumbnailColorizeCustom',
+			'thumbnailCoordsPermanent'
+		);
+
+		protected $defaultOptions = array(
+			'autoRotation' => true,
+			'upscaling' => true,
+			'cropping' => true,
+			'quality' => 90,
+			'sharpening' => 'soft',
+			'bgcolor' => array(255, 255, 255, 0),
+			'targetFilename' => null,
+			'outputFormat' => null,
+			'thumbnailColorizeCustom' => array(0, 0, 0),
+			'thumbnailCoordsPermanent' => false
 		);
 
 		/**
@@ -149,7 +168,13 @@ class ImageManipulator extends Wire {
 			'se' => 'southeast',
 		);
 
+        protected $validIptcTags = array('005','007','010','012','015','020','022','025','030','035','037','038','040','045','047','050','055','060','062','063','065','070','075','080','085','090','092','095','100','101','103','105','110','115','116','118','120','121','122','130','131','135','150','199','209','210','211','212','213','214','215','216','217');
+
 		protected $isOriginal;
+
+		protected $thumbnailBoost;
+
+		protected $thumbnailCoordsPermanent;
 
 		private $propertyNames;
 
@@ -168,6 +193,15 @@ class ImageManipulator extends Wire {
 
 		public function __construct($entryItem=null, $options=array(), $bypassOperations=false) {
 
+			// version check module == class
+			$m = wire('modules')->get('PageImageManipulator')->getModuleInfo();
+			$m = preg_replace('/(\d)(?=\d)/', '$1.', str_pad("{$m['version']}", 3, "0", STR_PAD_LEFT));
+			$c = preg_replace('/(\d)(?=\d)/', '$1.', str_pad("{$this->version}", 3, "0", STR_PAD_LEFT));
+			if(!version_compare($m, $c, '=')) {
+				throw new WireException("The versions of Module PageImageManipulator ($m) and it dependency classfile ImageManipulator ($c) are inconsistent!)");
+				return;
+			}
+
 			$this->bypassOperations = true===$bypassOperations ? true : false;
 			// validate PageImage, FileImage, MemoryImage
 			if($entryItem instanceof Pageimage) {
@@ -178,7 +212,7 @@ class ImageManipulator extends Wire {
 				if(!$this->isOriginal) {
 					// traversing up 'til reaching root reference
 					$this->originalImage = $entryItem->original;
-					while(NULL !== $this->originalImage->original) {
+					while(null !== $this->originalImage->original) {
 						$reference = $this->originalImage->original;
 						$this->originalImage = $reference;
 					}
@@ -208,27 +242,41 @@ class ImageManipulator extends Wire {
 				if(in_array($v, $tmp2)) { continue; }
 				$this->propertyNames[] = $v;
 			}
+			$this->propertyNames[] = 'iptcRaw';
 			sort($this->propertyNames);
 
-			// filling all options with global custom values from config.php
-			$default_options = array();
-			foreach($this->optionNames as $option) {
-				if(!isset(wire('config')->imageSizerOptions[$option]) ) { continue; }
-				$default_options[$option] = wire('config')->imageSizerOptions[$option];
+			// check if we can be used to boost the thumbnail module, - is it installed?
+			if(true === ($this->thumbnailBoost = (bool)wire('modules')->isInstalled('ProcessCropImage'))) {
+				// now check that at least the minimum version number of ProcessCropImage is installed:
+				$needed = '1.0.2';
+				$a = wire('modules')->get('ProcessCropImage')->getModuleInfo();
+				$actual = preg_replace('/(\d)(?=\d)/', '$1.', str_pad("{$a['version']}", 3, "0", STR_PAD_LEFT));
+				$this->thumbnailBoost = version_compare($actual, $needed, '<') ? false : true;
 			}
-			$this->setOptions($default_options);
 
-			// optional fill properties with options passed to the class instance, which overwrite the default ones
-			if(is_array($options) && count($options)>0) {
-				$this->setOptions($options);
+			// merging all options: classdefaults, global custom values from config.php and instance-options
+			$this->optionNames = array_keys($this->defaultOptions);
+			$this->configOptions1 = wire('config')->imageSizerOptions;
+			if(!is_array($this->configOptions1)) $this->configOptions1 = array();
+			$this->configOptions2 = wire('config')->imageManipulatorOptions;
+			if(!is_array($this->configOptions2)) $this->configOptions2 = array();
+			$options = is_array($options) ? $options : array();
+			$tmp = array_merge($this->defaultOptions, $this->configOptions1, $this->configOptions2, $options);
+			$options = array();
+			foreach($tmp as $k=>$v) {
+				if(in_array($k, $this->optionNames)) {
+					$options["$k"] = $v;
+				}
 			}
+			$options['thumbnailCoordsPermanent'] = $this->thumbnailBoost ? $options['thumbnailCoordsPermanent'] : false;
+			$this->setOptions($options);
 
 			// init by entry type
 			if('page'==$this->entryItem || 'file'==$this->entryItem) {
 				$this->initFileImage();
 			}
 			if('memory'==$this->entryItem) {
-				$this->initMemoryImage();
+				$this->initMemoryImage($entryItem);
 			}
 		}
 
@@ -255,10 +303,25 @@ class ImageManipulator extends Wire {
 			}
 		}
 
-		private function initMemoryImage() {
+		private function initMemoryImage($im) {
+			$this->imDibDst = @imagecreatetruecolor(imagesx($im), imagesy($im));
+			imagecopy($this->imDibDst, $im, 0, 0, 0, 0, imagesx($im), imagesy($im));
+			if(true === ($this->dibIsLoaded = $this->isResourceGd($this->imDibDst))) {
+				$info = array(imagesx($im),imagesy($im));
+				$this->image = array(
+					'width'	    => $info[0],
+					'height'    => $info[1],
+					'landscape' => (bool)($info[0]>$info[1]),
+					'ratio'     => floatval(($info[0]>=$info[1] ? $info[0]/$info[1] : $info[1]/$info[2]))
+				);
+			}
 		}
 
 		protected function loadImageInfo() {
+			if('memory'==$this->entryItem) {
+				return false;
+			}
+
 			$additional_info = array();
 			$info = @getimagesize($this->filename,$additional_info);
 			if( $info===false || ! isset($info[2]) ) {
@@ -287,21 +350,12 @@ class ImageManipulator extends Wire {
 			}
 
 			// read metadata if present and if its the first call of the method
-			if( isset($additional_info['APP13']) && ! isset($this->iptc_raw) ) {
+			if( isset($additional_info['APP13']) && ! isset($this->iptcRaw) ) {
 				$iptc = iptcparse($additional_info["APP13"]);
-				if( is_array($iptc) ) {
-					$this->iptc_raw = $iptc;
+				if(is_array($iptc)) {
+					$this->iptcRaw = $iptc;
 				}
 			}
-/*
-			// TODO 1 -c metadata: optional read some Exifdata to merge them into iptc-data ??
-			if($this->imageType == 2 && function_exists('exif_read_data')) {
-				$exif = exif_read_data($this->filename);
-				if( is_array($exif) ) {
-					$this->exif_raw = $exif;
-				}
-			}
-*/
 			if($this->imageType==1) {
 				$this->image['bits'] = isset($info['bits']) ? $info['bits'] : 8;
 			}
@@ -443,7 +497,7 @@ class ImageManipulator extends Wire {
 			}
 			$check = array('outputFormat'=>ImageManipulator::getOutputFormat(), 'targetFilename'=>ImageManipulator::getTargetFilename());
 			foreach($options as $key => $value) {
-				if( ! in_array($key, $this->optionNames) ) {
+				if(!in_array($key, $this->optionNames)) {
 					// TODO 2 -c errorhandling : create ErrorLog-Entry
 					continue;
 				}
@@ -453,24 +507,23 @@ class ImageManipulator extends Wire {
 					case 'upscaling':
 					case 'cropping':
 					case 'extendedImageinfo':
-						if( is_bool($value) ) {
+					case 'thumbnailCoordsPermanent':
+						if(is_bool($value)) {
 							$ret = $value===true ? true : false;
 						}
-						elseif( is_int($value) ) {
+						elseif(is_int($value)) {
 							$ret = $value===1 ? true : false;
 						}
-						elseif( is_string($value) && in_array(strtolower($value), array('1','on','true','yes','y')) ) {
+						elseif(is_string($value) && in_array(strtolower($value), array('1','on','true','yes','y'))) {
 							$ret = true;
 						}
-						elseif( is_string($value) && in_array(strtolower($value), array('0','off','false','no','n')) ) {
+						elseif(is_string($value) && in_array(strtolower($value), array('0','off','false','no','n'))) {
 							$ret = false;
 						}
 						else {
 							// TODO 2 -c errorhandling : create ErrorLog-Entry
-							if(isset(wire('config')->imageSizerOptions[$key])) {
-								$ret = wire('config')->imageSizerOptions[$key];
-							}
-							else {
+							$ret = $this->getDefaultOption($key);
+							if(!is_bool($ret)) {
 								continue;
 							}
 						}
@@ -478,10 +531,8 @@ class ImageManipulator extends Wire {
 
 					case 'quality':
 						$ret = intval($value);
-						if($ret<1 || $ret>100) {
-							// TODO 2 -c errorhandling : create ErrorLog-Entry
-						}
-						$ret = $ret > 0 && $ret <101 ? $ret : (isset(wire('config')->imageSizerOptions['quality']) && is_int(wire('config')->imageSizerOptions['quality']) && wire('config')->imageSizerOptions['quality'] > 0 && wire('config')->imageSizerOptions['quality'] <101 ? wire('config')->imageSizerOptions['quality'] : 90 );
+						$ret = $ret<1 || $ret>100 ? $this->getDefaultOption($key) : $ret;
+						$ret = $ret>0 && $ret<101 ? $ret : 90;
 						break;
 
 					case 'sharpening':
@@ -493,7 +544,7 @@ class ImageManipulator extends Wire {
 						}
 						else {
 							// TODO 2 -c errorhandling : create ErrorLog-Entry
-							$ret = isset(wire('config')->imageSizerOptions[$key]) ? wire('config')->imageSizerOptions[$key] : 'soft';
+							$ret = in_array($this->getDefaultOption($key), array('soft','medium','strong','multistep')) ? $this->getDefaultOption($key) : 'soft';
 						}
 						break;
 
@@ -509,6 +560,7 @@ class ImageManipulator extends Wire {
 							$ret = strtolower(pathinfo($this->filename, PATHINFO_EXTENSION));
 							if(!in_array($ret, array_keys($this->supportedImageTypes))){
 								// TODO 2 -c errorhandling : create ErrorLog-Entry
+								$ret = 'jpg';
 							}
 						}
 						break;
@@ -519,10 +571,15 @@ class ImageManipulator extends Wire {
 
 					case 'bgcolor':
 						$color = $this->sanitizeColor($value);
-						$ret = empty($color) ? 127 : intval(($color[0] + $color[1] + $color[2]) / 3);
+						$ret = empty($color) ? array(127,127,127) : $color;
+						break;
+
+					case 'thumbnailColorizeCustom':
+						$color = $this->sanitizeColor($value, false, true);
+						$ret = empty($color) ? array(127,127,127) : $color;
 						break;
 				}
-				if( isset($ret) ) {
+				if(isset($ret)) {
 					$this->$key = $ret;
 				}
 			}
@@ -584,6 +641,9 @@ class ImageManipulator extends Wire {
 
 
 		public function pimSave($outputFormat=null) {
+			if('memory'==$this->entryItem) {
+				return $this->getMemoryImage();
+			}
 			// optionally get & set outputFormat
 			$outputFormat = null===$outputFormat ? $this->outputFormat : $outputFormat;
 			if(is_int($outputFormat) && in_array($outputFormat,$this->supportedImageTypes)) {
@@ -621,11 +681,14 @@ class ImageManipulator extends Wire {
 						$result = imagegif($this->imDibDst, $dest);
 						break;
 					case IMAGETYPE_PNG:
+						imagealphablending($this->imDibDst, false);
+						imagesavealpha($this->imDibDst, true);
 						// convert 1-100 (worst-best) scale to 0-9 (best-worst) scale for PNG
 						$quality = round(abs(($this->quality - 100) / 11.111111));
 						$result = imagepng($this->imDibDst, $dest, $quality);
 						break;
 					case IMAGETYPE_JPEG:
+						imagealphablending($this->imDibDst, false);
 						$result = imagejpeg($this->imDibDst, $dest, $this->quality);
 						break;
 				}
@@ -643,7 +706,7 @@ class ImageManipulator extends Wire {
 				}
 
 				// if we've retrieved IPTC-Metadata from sourcefile, we write it back now
-				if(isset($this->iptc_raw)) {
+				if(isset($this->iptcRaw)) {
 					$content = iptcembed($this->iptcPrepareData(), $targetFilename);
 					if($content!==false) {
 						$dest = $targetFilename.'.tmp';
@@ -729,8 +792,8 @@ class ImageManipulator extends Wire {
 				// if we have a GIF, we store transparentColorIndex
 				if($this->imageType == IMAGETYPE_GIF) {
 					// @mrx GIF transparency
-					$transparentIndex = ImageColorTransparent($this->imDibDst);
-					$this->GifTransparentColor = $transparentIndex != -1 ? ImageColorsForIndex($this->imDibDst, $transparentIndex) : 0;
+					$transparentIndex = imagecolortransparent($this->imDibDst);
+					$this->GifTransparentColor = $transparentIndex != -1 ? imagecolorsforindex($this->imDibDst, $transparentIndex) : 0;
 				}
 			}
 			// return a working copy of the current state
@@ -766,11 +829,11 @@ class ImageManipulator extends Wire {
 		* @param mixed $h
 		* @return resource
 		*/
-		private function createTruecolor($w,$h) {
+		private function createTruecolor($w, $h) { //}, $bg=null) {
 			if($this->bypassOperations) {
 				return;
 			}
-			$im = @imagecreatetruecolor($w, $h);
+			$im = imagecreatetruecolor($w, $h);
 			if($this->imageType == IMAGETYPE_PNG) {
 				// @adamkiss PNG transparency
 				imagealphablending($im, false);
@@ -778,14 +841,26 @@ class ImageManipulator extends Wire {
 			}
 			elseif($this->imageType == IMAGETYPE_GIF && !empty($this->GifTransparentColor)) {
 				// @mrx GIF transparency
-				$transparentNew = ImageColorAllocate($im, $this->GifTransparentColor['red'], $this->GifTransparentColor['green'], $this->GifTransparentColor['blue']);
-				$transparentNewIndex = ImageColorTransparent($im, $transparentNew);
-				ImageFill($im, 0, 0, $transparentNewIndex);
+				$transparentNew = imagecolorallocate($im, $this->GifTransparentColor['red'], $this->GifTransparentColor['green'], $this->GifTransparentColor['blue']);
+				$transparentNewIndex = imagecolortransparent($im, $transparentNew);
+				imagefill($im, 0, 0, $transparentNewIndex);
 			}
 			else {
-				$bgcolor = imagecolorallocate($im, $this->bgcolor[0], $this->bgcolor[1], $this->bgcolor[2]);
-				imagefilledrectangle($im, 0, 0, $w, $h, $bgcolor);
-				imagealphablending($im, true);
+				imagealphablending($im, false);
+//				if(is_array($bg) && count($bg)==4) {
+//					$bg = array_values($this->sanitizeColor($bg, true));
+//					$bgcolor = imagecolorallocatealpha($im, $bg[0], $bg[1], $bg[2], $bg[3]);
+//				}
+//				elseif(is_array($bg) && count($bg)==3) {
+//					$bg = array_values($this->sanitizeColor($bg));
+//					$bgcolor = imagecolorallocate($im, $bg[0], $bg[1], $bg[2]);
+//				}
+//				else {
+//					// we take the global bgcolor
+//					$bgcolor = count($this->bgcolor)==4 ? imagecolorallocatealpha($im, $this->bgcolor[0], $this->bgcolor[1], $this->bgcolor[2], $this->bgcolor[3]) : imagecolorallocate($im, $this->bgcolor[0], $this->bgcolor[1], $this->bgcolor[2]);
+//				}
+//				imagefilledrectangle($im, 0, 0, $w, $h, $bgcolor);
+//				imagealphablending($im, true);
 			}
 			return $im;
 		}
@@ -837,7 +912,7 @@ class ImageManipulator extends Wire {
 		}
 
 
-		public function rotate($degree, $backgroundColor=127) {
+		public function rotate($degree, $bgcolor=array()) {
 			if($this->bypassOperations) {
 				return $this;
 			}
@@ -845,8 +920,8 @@ class ImageManipulator extends Wire {
 				throw new WireException("Cannot load the MemoryImage!");
 				return false;
 			}
-			 // TODO 1 -c robustness: provide different ColorSystems ?
-			$backgroundColor = is_int($backgroundColor) && $backgroundColor>=0 && $backgroundColor<=255 ? $backgroundColor : 127;
+			$bg = is_array($bgcolor) && count($bgcolor)>=3 ? $this->sanitizeColor($bgcolor,true) : $this->bgcolor;
+			$bgcolor = count($bg)==4 ? imagecolorallocatealpha($im, $bg[0], $bg[1], $bg[2], $bg[3]) : imagecolorallocate($im, $bg[0], $bg[1], $bg[2]);
 			$degree = (is_float($degree) || is_int($degree)) && $degree > -361 && $degree < 361 ? $degree : false;
 			if($degree===false) {
 				throw new WireException("Error with rotate MemoryImage: wrong param for degree");
@@ -855,8 +930,12 @@ class ImageManipulator extends Wire {
 			if(in_array($degree, array(-360,0,360))) {
 				return $this;
 			}
-			$im2 = @imagerotate($im, $degree, $backgroundColor, 0);
-			@imagedestroy($im);
+			#imagealphablending($im, false);
+			#imagesavealpha($im, true);
+			$im2 = imagerotate($im, $degree, $bgcolor, 0);
+			#imagealphablending($im2, false);
+			#imagesavealpha($im2, true);
+			imagedestroy($im);
 			if(!$this->isResourceGd($im2)) {
 				throw new WireException("Error when trying to rotate MemoryImage.");
 				return false;
@@ -891,7 +970,7 @@ class ImageManipulator extends Wire {
 		}
 
 
-		public function resize($dst_width=0, $dst_height=0, $auto_sharpen=true, $sharpen_mode='soft') {
+		public function resize($dst_width=0, $dst_height=0, $sharpen_mode='soft') {
 			if($this->bypassOperations) {
 				return $this;
 			}
@@ -912,25 +991,25 @@ class ImageManipulator extends Wire {
 				return false;
 			}
 			$res = $this->imWrite($im2) ? $this : false;
-			if(!$auto_sharpen) {
+			if('none'==$sharpen_mode) {
 				return $res;
 			}
 			return false===$res ? false : $this->sharpen($sharpen_mode);
 		}
 
 
-		public function width($dst_width, $auto_sharpen=true, $sharpen_mode='soft') {
-			return $this->resize($dst_width, 0, $auto_sharpen, $sharpen_mode);
+		public function width($dst_width, $sharpen_mode='soft') {
+			return $this->resize($dst_width, 0, $sharpen_mode);
 		}
 
 
-		public function height($dst_height, $auto_sharpen=true, $sharpen_mode='soft') {
-			return $this->resize(0, $dst_height, $auto_sharpen, $sharpen_mode);
+		public function height($dst_height, $sharpen_mode='soft') {
+			return $this->resize(0, $dst_height, $sharpen_mode);
 		}
 
 
 		public function sharpen($mode='soft') {
-			if($this->bypassOperations) {
+			if($this->bypassOperations || 'none'==$mode) {
 				return $this;
 			}
 			if(is_array($mode) && count($mode)===3) {
@@ -938,7 +1017,12 @@ class ImageManipulator extends Wire {
 				$mode = 'custom';
 			}
 			else {
+				if(!in_array($mode,array('none','soft','medium','strong'))) {
+					throw new WireException("Wrong param for sharpen: (". htmlentities($mode) .")");
+					return false;
+				}
 				switch($mode) {
+
 					case 'multistep':
 						$sharpenMatrix = array(
 												array( -1.2, -1, -1.2 ),
@@ -946,6 +1030,7 @@ class ImageManipulator extends Wire {
 												array( -1.2, -1, -1.2 )
 						);
 						break;
+
 					case 'strong':
 						$sharpenMatrix = array(
 												array( -1.4, -1.2, -1.4 ),
@@ -953,6 +1038,7 @@ class ImageManipulator extends Wire {
 												array( -1.4, -1.2, -1.4 )
 						);
 						break;
+
 					case 'medium':
 						$sharpenMatrix = array(
 												array( -1, -1, -1 ),
@@ -960,7 +1046,9 @@ class ImageManipulator extends Wire {
 												array( -1, -1, -1 )
 						);
 						break;
+
 					case 'soft':
+
 					default:
 						$sharpenMatrix = array(
 												array( -1, -1, -1 ),
@@ -1206,7 +1294,7 @@ class ImageManipulator extends Wire {
 		}
 
 
-		public function sepia($rgb = array(47,32,8)) {
+		public function sepia($rgb = array(27,12,-12)) {
 			if($this->bypassOperations) {
 				return $this;
 			}
@@ -1214,7 +1302,7 @@ class ImageManipulator extends Wire {
 				throw new WireException("Cannot load the MemoryImage!");
 				return false;
 			}
-			$rgb = is_array($rgb) && count($rgb)==3 ? $rgb : array(47,32,8);
+			$rgb = is_array($rgb) && count($rgb)==3 ? $rgb : array(27,12,-12);
 			$res = @imagefilter($im, IMG_FILTER_GRAYSCALE);
 			if(!$res || !$this->isResourceGd($im)) {
 				throw new WireException("Error when applying filter sepia to  MemoryImage.");
@@ -1225,7 +1313,6 @@ class ImageManipulator extends Wire {
 				throw new WireException("Error when applying filter sepia to  MemoryImage.");
 				return false;
 			}
-			$res = @imagefilter($im, IMG_FILTER_BRIGHTNESS, -11);
 			if(!$res || !$this->isResourceGd($im)) {
 				throw new WireException("Error when applying filter sepia to  MemoryImage.");
 				return false;
@@ -1242,21 +1329,17 @@ class ImageManipulator extends Wire {
 				throw new WireException("Cannot load the MemoryImage!");
 				return false;
 			}
-			$alpha = 0;
-			if(is_array($anyColor) && count($anyColor)==4 ) {
-				// we have RGB-A value
-				$alpha = intval(array_pop($anyColor));
-				$rgb = $anyColor;
-			}
-			elseif(is_array($anyColor) && count($anyColor)==3 ) {
-				$rgb = $anyColor;
+			$color = $this->sanitizeColor($anyColor, true, true);
+			$alpha = count($color)==4 ? intval(array_pop($color)) : 0;
+			if(!is_array($anyColor)) {
+				// we have got a hexcolor or a w3c name or a string like 'rgb(n,n,n)'
+				$rgb = array();
+				foreach($color as $c) {
+					$rgb[] = intval(($c * 2) - 255);
+				}
 			}
 			else {
-				$color = $this->sanitizeColor($anyColor);
-				$rgb = array();
-				foreach($color as $col) {
-					$rgb[] = intval(($col * 2) - 255);
-				}
+				$rgb = $color;
 			}
 			if(version_compare(phpversion(), '5.2.5', '>=')) {
 				$res = imagefilter($im, IMG_FILTER_COLORIZE, $rgb[0], $rgb[1], $rgb[2], $alpha);
@@ -1284,7 +1367,7 @@ class ImageManipulator extends Wire {
 				return false;
 			}
 			$useAdvancedPixelation = true===$useAdvancedPixelation ? true : false;
-			$blockSize = is_int($blockSize) && $blockSize>0 ? $blockSize : 5;
+			$blockSize = is_int($blockSize) && $blockSize>0 ? $blockSize : 3;
 			$res = @imagefilter($im, IMG_FILTER_PIXELATE, $blockSize, $useAdvancedPixelation);
 			if(!$res || !$this->isResourceGd($im)) {
 				throw new WireException("Error when trying to apply filter pixelate to MemoryImage.");
@@ -1786,11 +1869,11 @@ class ImageManipulator extends Wire {
 				}
 			}
 			if(null===$bgcolor) {
-				$bgcolor = array(255,255,255);
+				$bgcolor = $this->bgcolor;
 			}
-			$bgcolor = $this->sanitizeColor($bgcolor);
+			$bgcolor = $this->sanitizeColor($bgcolor, true);
 			$position = !is_string($position) || (!in_array(strtolower($position), $this->positioningValues) && !in_array(strtolower($position), array_keys($this->positioningValues))) ? 'center' : strtolower($position);
-			if(!is_int($width) || $width<10 || !is_int($height) || $height<10) {
+			if(!is_int($width) || $width<8 || !is_int($height) || $height<8) {
 				throw new WireException("Wrong params width or height with method canvas!");
 				return false;
 			}
@@ -1798,6 +1881,7 @@ class ImageManipulator extends Wire {
 				throw new WireException("Cannot load the MemoryImage!");
 				return false;
 			}
+			imagealphablending($im, false);
 			$imWidth = imagesx($im);
 			$imHeight = imagesy($im);
 			$padding = !is_int($padding) || $padding<0 || $padding>25 ? 0 : $padding;
@@ -1808,23 +1892,30 @@ class ImageManipulator extends Wire {
 			$calc->down($imWidthNew, $imHeightNew, $width - $padding, $height - $padding);
 			unset($calc);
 			if($imWidthNew!=$imWidth || $imHeightNew!=$imHeight) {
-				$im2 = $this->createTruecolor($imWidthNew, $imHeightNew);
-				if(!@imagecopyresampled($im2, $im, 0, 0, 0, 0, $imWidthNew, $imHeightNew, $imWidth, $imHeight)) {
+				$im2 = imagecreatetruecolor($imWidthNew, $imHeightNew);
+				imagealphablending($im2, false);
+				if(!imagecopyresampled($im2, $im, 0, 0, 0, 0, $imWidthNew, $imHeightNew, $imWidth, $imHeight)) {
 					throw new WireException("Error when trying to resize watermarkLogo to fit to the MemoryImage.");
 					return false;
 				}
+				imagealphablending($im2, false);
 				$im = $this->createTruecolor($imWidthNew, $imHeightNew);
-				@imagecopy($im, $im2, 0, 0, 0, 0, $imWidthNew, $imHeightNew);
-				@imagedestroy($im2);
+				imagealphablending($im, false);
+				imagecopy($im, $im2, 0, 0, 0, 0, $imWidthNew, $imHeightNew);
+				imagedestroy($im2);
 			}
-			$canvas = $this->createTruecolor($width, $height);
-			@imagealphablending($canvas, true);
-			$bg1 = imagecolorallocate($canvas, 255,255,255);
-			@imagefilledrectangle($canvas, 0, 0, $width, $height, $bg1);
+			imagealphablending($im, false);
+			$canvas = imagecreatetruecolor($width, $height);
+			imagealphablending($canvas, false);
+			#imagesavealpha($canvas, true);
+			$bga = imagecolorallocatealpha($canvas, 255, 255, 255, 127);
+			imagefilledrectangle($canvas, 0, 0, $width, $height, $bga);
+			imagealphablending($canvas, true);
+			#imagesavealpha($canvas, true);
 			$bg = count($bgcolor)==4 ? imagecolorallocatealpha($canvas, $bgcolor[0], $bgcolor[1], $bgcolor[2], $bgcolor[3]) : imagecolorallocate($canvas, $bgcolor[0], $bgcolor[1], $bgcolor[2]);
-			@imagefilledrectangle($canvas, 0, 0, $width, $height, $bg);
-			@imagealphablending($canvas, true);
-			@imagesavealpha($canvas, true);
+			imagefilledrectangle($canvas, 0, 0, $width, $height, $bg);
+			imagealphablending($canvas, true);
+			#imagesavealpha($canvas, true);
 			switch($position) {
 				case 'n':
 				case 'north':
@@ -1871,9 +1962,11 @@ class ImageManipulator extends Wire {
 					$posY = intval(($height - $imHeightNew) / 2);
 			}
 			$res = @imagecopy($canvas, $im, $posX, $posY, 0, 0, $imWidthNew, $imHeightNew);
-			@imagedestroy($im);
+			imagedestroy($im);
+			imagealphablending($canvas, true);
+			#imagesavealpha($canvas, false);
 			if(!$res || !$this->isResourceGd($canvas)) {
-				throw new WireException("Error when trying to apply a watermarkLogo to the MemoryImage.");
+				throw new WireException("Error when trying to apply canvas to the MemoryImage.");
 				return false;
 			}
 			return $this->imWrite($canvas) ? $this : false;
@@ -1946,12 +2039,14 @@ class ImageManipulator extends Wire {
 		}
 
 
-		public static function fileThumbnailModule($sourcePath, $targetPath, $cropX, $cropY, $cropW, $cropH, $targetWidth, $targetHeight, $quality=90, $sharpenMode='soft') {
-			$options = array('quality'=>$quality, 'targetFilename'=>$targetPath);
-			$pim = new ImageManipulator($sourcePath, $options);
+	// the next three methods are used to boost apeisas ThumbnailModule
 
-			// user has clicked on button Crop&Go, but has not drawn the rectangle with cropping values!!
+		public static function fileThumbnailModule(Pageimage $sourcePageimage, $targetPath, $prefix, $cropX, $cropY, $cropW, $cropH, $targetWidth, $targetHeight, $quality=90, $sharpening='soft', $colorize='none') {
+			$options = array('quality'=>$quality, 'targetFilename'=>$targetPath); //, 'thumbnailCoordsPermanent'=>true);
+			$pim = new ImageManipulator($sourcePageimage, $options);
+
 			if($cropW==0 || $cropH==0) {
+				// user has clicked on button Crop&Go, but has not drawn the rectangle with cropping values!!
 				$w = $pim->image['width'];
 				$h = $pim->image['height'];
 				$cropW = $targetWidth;
@@ -1967,37 +2062,139 @@ class ImageManipulator extends Wire {
 				throw new WireException("Error when trying to crop ThumbnailFile.");
 				return false;
 			}
-			if('multistep'==$sharpenMode) {
+			if('multistep'==$sharpening) {
 				if(false===$pim->stepResize($targetWidth, $targetHeight)) {
 					throw new WireException("Error when trying stepResize ThumbnailFile.");
 					return false;
 				}
 			}
 			else {
-				if(!in_array($sharpenMode,array('soft','medium','strong'))) {
-					$sharpenMode = in_array($pim->getSharpening(),array('soft','medium','strong')) ? $pim->getSharpening() : 'soft';
+				if(!in_array($sharpening,array('none','soft','medium','strong'))) {
+					$sharpening = 'soft';
 				}
-				if(false===$pim->resize($targetWidth, $targetHeight, true, $sharpenMode)) {
+				if(false===$pim->resize($targetWidth, $targetHeight, $sharpening)) {
 					throw new WireException("Error when trying to resize ThumbnailFile.");
 					return false;
 				}
+			}
+			switch($colorize) {
+				case 'grayscale':
+					$pim->grayscale();
+					break;
+				case 'sepia':
+					$pim->sepia();
+					break;
+				case 'cyan':
+					$pim->sepia(array(-8,10,14));
+					break;
+				case 'custom':
+					// get the custom color
+					if(!empty($pim->thumbnailColorizeCustom)) {
+						$color = $pim->sanitizeColor($pim->thumbnailColorizeCustom, false, true);
+					}
+					else {
+						$color = array(0,0,0);
+					}
+					$pim->sepia($color);
+					break;
 			}
 			if(false===$pim->save()) {
 				throw new WireException("Error when trying to save ThumbnailFile.");
 				return false;
 			}
-
+			if($pim->thumbnailCoordsPermanent) {
+				// for permanent storage: write coords into IPTC customs field
+				$pim->fileThumbnailModuleCoordsWrite($prefix, $cropX, $cropY, $cropW, $cropH, $quality, $sharpening, $colorize);
+			}
 			unset($pim);
 			return true;
 		}
 
+		public static function fileThumbnailModuleCoordsRead(Pageimage $sourcePageimage, &$x1, &$y1, &$w, &$h, &$params, $prefix=null) {
+			$options = array(); //'thumbnailCoordsPermanent'=>true);
+			$pim = new ImageManipulator($sourcePageimage, $options);
+			if(!$pim->thumbnailCoordsPermanent) {
+				unset($pim);
+				return false;
+			}
+			$a = $pim->getIPTCraw();
+			unset($pim);
+			if(!isset($a['2#215'])) {
+				return false;
+			}
+			// if $prefix === null we return the complete array with all subsets
+			if(null === $prefix) {
+				return unserialize($a['2#215'][0]);
+			}
+			// if is requested a specific prefix, we extract it if available and return true | false for success
+			$a = unserialize($a['2#215'][0]);
+			if(!is_array($a) || !isset($a[$prefix])) {
+				return false;
+			}
+			$x1 = $a[$prefix][0];
+			$y1 = $a[$prefix][1];
+			$w = $a[$prefix][2];
+			$h = $a[$prefix][3];
+			foreach(array('quality','sharpening','colorize') as $k=>$v) {
+				if(isset($a[$prefix][$k+4])) {
+					$params[$v] = $a[$prefix][$k+4];
+				}
+			}
+			return true;
+		}
 
+		private function fileThumbnailModuleCoordsWrite($prefix, $x1=null, $y1=null, $w=null, $h=null, $quality=null, $sharpening=null, $colorize=null) {
+	        if(0==$w || 0==$h) {
+				return false;
+			}
+			// new coords
+			$permanent = array($prefix=>array($x1,$y1,$w,$h,$quality,$sharpening,$colorize));
+			// get old coords
+			$a = $this->getIPTCraw();
+			$a = isset($a['2#215']) && isset($a['2#215'][0]) ? unserialize($a['2#215'][0]) : array();
+			if(!is_array($a)) {
+				$a = array();
+			}
+			// write back merged data
+			$data = array(serialize(array_merge($a, $permanent)));
+			$this->setIPTCraw(array('2#215'=>$data));
+
+			// now we write this to the original image
+			$targetFilename = $this->isOriginal ? $this->filename : $this->originalImage->filename;
+			if(!is_file($targetFilename) || !is_writeable($targetFilename)) {
+				return false;
+			}
+			$content = iptcembed($this->iptcPrepareData(), $targetFilename);
+			if(false!==$content) {
+				$dest = $targetFilename.'.tmp';
+				if(strlen($content) == @file_put_contents($dest, $content, LOCK_EX)) {
+					// on success we replace the file
+					@rename($targetFilename, $targetFilename.'bak');
+					if(!rename($dest, $targetFilename)) {
+						@rename($targetFilename.'bak', $targetFilename);
+						return false;
+					}
+					@unlink($targetFilename.'bak');
+				}
+				else {
+					// it was created a temp diskfile but not with all data in it
+					if(file_exists($dest)) {
+						@unlink($dest);
+					}
+					return false;
+				}
+			}
+			return true;
+		}
 
 
 
 	// Helpers
 
 		private function adjustOutputFormat() {
+			if('page'!=$this->entryItem && 'file'!=$this->entryItem) {
+				return;
+			}
 			$outputFormat = $this->getOutputFormat();
 			$targetFilename = $this->getTargetFilename();
 			$targetFilename = empty($targetFilename) ? $this->filename : $targetFilename;
@@ -2052,54 +2249,54 @@ class ImageManipulator extends Wire {
 			return $data;
 		}
 
-		private function sanitizeColor($value) {
-			if( is_array($value) && count($value)==4 ) {
-				$tmp = array_values($value);
-				$color = array();
-				$color[0] = intval(trim($tmp[0]));
-				$color[1] = intval(trim($tmp[1]));
-				$color[2] = intval(trim($tmp[2]));
-				$color[3] = intval(trim($tmp[3]));
-			}
-			elseif( is_array($value) && count($value)==3 ) {
-				$tmp = array_values($value);
-				$color = array();
-				$color[0] = intval(trim($tmp[0]));
-				$color[1] = intval(trim($tmp[1]));
-				$color[2] = intval(trim($tmp[2]));
+		public function sanitizeColor($value, $forGdColorallocate=false, $forAdjustments=false) {
+			if( is_array($value) && (count($value)==4 || count($value)==3)) {
+				$color = $value;
 			}
 			elseif(is_int($value)) {
-				if($value>=0 && $value<=255) {
-					$color = array($value, $value, $value);
-				}
+				$color = array($value, $value, $value);
 			}
 			else {
 				//W3C approved color array (disabled)
 				//static $common_colors = array('black'=>'#000000','silver'=>'#C0C0C0','gray'=>'#808080', 'white'=>'#FFFFFF','maroon'=>'#800000','red'=>'#FF0000','purple'=>'#800080','fuchsia'=>'#FF00FF','green'=>'#008000','lime'=>'#00FF00','olive'=>'#808000','yellow'=>'#FFFF00','navy'=>'#000080', 'blue'=>'#0000FF','teal'=>'#008080','aqua'=>'#00FFFF');
 				//All color names array
-				//http://www.w3schools.com/css/css_colornames.asp
 				static $common_colors = array('antiquewhite'=>'#FAEBD7','aquamarine'=>'#7FFFD4','beige'=>'#F5F5DC','black'=>'#000000','blue'=>'#0000FF','brown'=>'#A52A2A','cadetblue'=>'#5F9EA0','chocolate'=>'#D2691E','cornflowerblue'=>'#6495ED','crimson'=>'#DC143C','darkblue'=>'#00008B','darkgoldenrod'=>'#B8860B','darkgreen'=>'#006400','darkmagenta'=>'#8B008B','darkorange'=>'#FF8C00','darkred'=>'#8B0000','darkseagreen'=>'#8FBC8F','darkslategray'=>'#2F4F4F','darkviolet'=>'#9400D3','deepskyblue'=>'#00BFFF','dodgerblue'=>'#1E90FF','firebrick'=>'#B22222','forestgreen'=>'#228B22','gainsboro'=>'#DCDCDC','gold'=>'#FFD700','gray'=>'#808080','green'=>'#008000','greenyellow'=>'#ADFF2F','hotpink'=>'#FF69B4','indigo'=>'#4B0082','khaki'=>'#F0E68C','lavenderblush'=>'#FFF0F5','lemonchiffon'=>'#FFFACD','lightcoral'=>'#F08080','lightgoldenrodyellow'=>'#FAFAD2','lightgreen'=>'#90EE90','lightsalmon'=>'#FFA07A','lightskyblue'=>'#87CEFA','lightslategray'=>'#778899','lightyellow'=>'#FFFFE0','limegreen'=>'#32CD32','magenta'=>'#FF00FF','mediumaquamarine'=>'#66CDAA','mediumorchid'=>'#BA55D3','mediumseagreen'=>'#3CB371','mediumspringgreen'=>'#00FA9A','mediumvioletred'=>'#C71585','mintcream'=>'#F5FFFA','moccasin'=>'#FFE4B5','navy'=>'#000080','olive'=>'#808000','orange'=>'#FFA500','orchid'=>'#DA70D6','palegreen'=>'#98FB98','palevioletred'=>'#D87093','peachpuff'=>'#FFDAB9','pink'=>'#FFC0CB','powderblue'=>'#B0E0E6','red'=>'#FF0000','royalblue'=>'#4169E1','salmon'=>'#FA8072','seagreen'=>'#2E8B57','sienna'=>'#A0522D','skyblue'=>'#87CEEB','slategray'=>'#708090','springgreen'=>'#00FF7F','tan'=>'#D2B48C','thistle'=>'#D8BFD8','turquoise'=>'#40E0D0','violetred'=>'#D02090','white'=>'#FFFFFF','yellow'=>'#FFFF00');
 				if(isset($common_colors[strtolower($value)])) {
 					$value = $common_colors[strtolower($value)];
 				}
 				if($value{0} == '#') { //case of #nnnnnn or #nnn
-					$cor = strtoupper($value);
-					if(strlen($cor) == 4) // Turn #RGB into #RRGGBB
-					{
-						$cor = "#" . $cor{1} . $cor{1} . $cor{2} . $cor{2} . $cor{3} . $cor{3};
+					$c = strtoupper($value);
+					if(strlen($c) == 4) { // Turn #RGB into #RRGGBB
+						$c = "#" . $c{1} . $c{1} . $c{2} . $c{2} . $c{3} . $c{3};
 					}
 					$color = array();
-					$color[0]=hexdec(substr($cor, 1, 2));
-					$color[1]=hexdec(substr($cor, 3, 2));
-					$color[2]=hexdec(substr($cor, 5, 2));
+					$color[0]=hexdec(substr($c, 1, 2));
+					$color[1]=hexdec(substr($c, 3, 2));
+					$color[2]=hexdec(substr($c, 5, 2));
 				}
-				else { //case of RGB(r,g,b)
-					$value = str_replace(array('rgb','RGB','(',')'), '', $value);
-					$cor   = explode(',', $value);
+				else { //case of RGB(r,g,b) or rgba(r,g,b,a)
+					$value = str_replace(array('rgb', 'RGB', 'rgba', 'RGBA', '(', ')'), '', $value);
+					$c     = explode(',', $value);
 					$color = array();
-					$color[0] = intval(trim($cor[0]));
-					$color[1] = intval(trim($cor[1]));
-					$color[2] = intval(trim($cor[2]));
+					$color[0] = $c[0];
+					$color[1] = $c[1];
+					$color[2] = $c[2];
+					if(isset($c[3])) $color[3] = trim($c[3]);
+				}
+			}
+			$min = $forAdjustments ? -255 : 0;
+			$max = 255;
+			$default = $forAdjustments ? 0 : 127;
+			foreach(array(0,1,2) as $c) {
+                $i = intval(trim($color[$c]));
+				$color[$c] = $i>=$min && $i<=$max ? $i : $default;
+			}
+			if(isset($color[3])) {  // rgba, value for the alpha channel
+				// we have a float like with css rgba, float 0 - 1 where 0 is transparent and 1 is opaque
+				$color[3] = $color[3]>=0 && $color[3]<=1 ? $color[3] : 0.5;
+				if($forGdColorallocate) {
+					// convert css rgba alpha setting float 0-1 (transparent-opaque) scale to GDs ImagecolorAllocateAlpha 0-127 (opaque-transparent) scale
+					$color[3] = intval((($color[3] * 127) - 127) * -1);
 				}
 			}
 			return $color;
@@ -2131,13 +2328,18 @@ class ImageManipulator extends Wire {
 			return true;
 		}
 
+
 		protected function iptcPrepareData() {
-			$iptc_new = '';
-			foreach(array_keys($this->iptc_raw) as $s) {
-				$tag = str_replace('2#', '', $s);
-				$iptc_new .= $this->iptcMakeTag(2, $tag, $this->iptc_raw[$s][0]);
+			$iptcNew = '';
+			foreach(array_keys($this->iptcRaw) as $s) {
+				$tag = substr($s,2);
+				if(substr($s,0,1)=='2' && in_array($tag, $this->validIptcTags) && is_array($this->iptcRaw[$s])) {
+	                foreach($this->iptcRaw[$s] as $row) {
+						$iptcNew .= $this->iptcMakeTag(2, $tag, $row);
+	                }
+				}
 			}
-			return $iptc_new;
+			return $iptcNew;
 		}
 
 		protected function iptcMakeTag($rec,$dat,$val) {
@@ -2158,6 +2360,30 @@ class ImageManipulator extends Wire {
 			}
 		}
 
+		public function getIPTCraw() {
+			if(isset($this->iptcRaw) && is_array($this->iptcRaw)) {
+				return $this->iptcRaw;
+			}
+			return array();
+		}
+
+		public function setIPTCraw($data) {
+			if(!is_array($data)) {
+				return false;
+			}
+			$this->iptcRaw = array_merge($this->getIPTCraw(), $data);
+			return is_array($this->iptcRaw);
+		}
+
+
+		private function getDefaultOption($key) {
+			$a = array_merge($this->defaultOptions, $this->configOptions1, $this->configOptions2);
+			if(!isset($a[$key])) {
+				return null;
+			}
+			return $a[$key];
+		}
+
 		/**
 		* makes protected and private class-properties accessible in ReadOnly mode
 		*
@@ -2166,7 +2392,7 @@ class ImageManipulator extends Wire {
 		* @param mixed $property_name
 		*/
 		public function __get($propertyName) {
-			if(in_array($propertyName, $this->propertyNames) && ! in_array($propertyName, array('imDibDst','imDibTmp'))) {
+			if(in_array($propertyName, $this->propertyNames) && ! in_array($propertyName, array('imDibDst'))) {
 				return $this->$propertyName;
 			}
 			return null;
