@@ -16,7 +16,7 @@
 
 /*--------------------------------------------------------------------------------------------------
  $Source: /WEB/pw2/htdocs/site/modules/PageImageManipulator/PageImageManipulator.module,v $
- $Id: PageImageManipulator.module,v 1.18 2013/08/26 22:49:06 horst Exp $
+ $Id: PageImageManipulator.module,v 1.20 2013/09/04 07:28:28 horst Exp $
 --------------------------------------------------------------------------------------------------*/
 
 class PageImageManipulator extends WireData implements Module {        // ConfigurableModule
@@ -24,7 +24,7 @@ class PageImageManipulator extends WireData implements Module {        // Config
 	static public function getModuleInfo() {
 		return array(
 			'title'		=> 'Page Image Manipulator',
-			'version'	=> 8,
+			'version'	=> 9,
 			'summary'	=> 'This module provide basic Imagemanipulations for Pageimages and Imagefiles',
 			'author'	=> 'horst',
 			'href'		=> 'http://mods.pw/5E',
@@ -34,26 +34,10 @@ class PageImageManipulator extends WireData implements Module {        // Config
 	}
 
 
-	private $defaultOptions = array(
-		'autoRotation' => true,
-		'upscaling' => true,
-		'cropping' => true,
-		'quality' => 90,
-		'sharpening' => 'soft',
-		'bgcolor' => 127,
-		'targetFilename' => null,
-		'outputFormat' => null,
-		'thumbnailCoordsPermanent' => true
-	);
-	private $optionNames;
-
-
-
 	/**
 	 * Populate default settings
 	 */
 	public function __construct() {
-		$this->optionNames = array_keys($this->defaultOptions);
 	}
 
 

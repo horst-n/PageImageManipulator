@@ -14,7 +14,7 @@
 class ImageManipulator extends Wire {
 
     // must be identical with the module version
-		protected $version = 8;
+		protected $version = 9;
 
 	// information of source imagefile
 
@@ -670,6 +670,12 @@ class ImageManipulator extends Wire {
 				throw new WireException("Error when trying to save the MemoryImage: we have no Targetfilename!");
 				return false;
 			}
+
+            // if there was no other operation until now, we need to load the Image, e.g. for imagetype conversion
+			if(!isset($this->dibIsLoaded)) {
+				$this->imLoad(true);
+			}
+
 			if(!$this->bypassOperations) {
 				// just to play save
 				$dest = $targetFilename.'.tmp';
@@ -781,7 +787,7 @@ class ImageManipulator extends Wire {
 		/**
 		* at first call, it loads the image into memory, and after that everytime create and provide a working copy
 		*/
-		private function imLoad() {
+		private function imLoad($onlyLoad=false) {
 			if($this->bypassOperations) return;
 			if(!isset($this->dibIsLoaded) || $this->dibIsLoaded!==true) {
 				$this->imDibDst = @imagecreatefromstring( file_get_contents($this->filename) );
@@ -795,6 +801,7 @@ class ImageManipulator extends Wire {
 					$transparentIndex = imagecolortransparent($this->imDibDst);
 					$this->GifTransparentColor = $transparentIndex != -1 ? imagecolorsforindex($this->imDibDst, $transparentIndex) : 0;
 				}
+				if(true===$onlyLoad) return true;
 			}
 			// return a working copy of the current state
 			$im = $this->createTruecolor(imagesx($this->imDibDst), imagesy($this->imDibDst));
@@ -1132,7 +1139,7 @@ class ImageManipulator extends Wire {
 		////
 		////                  p h p U n s h a r p M a s k
 		////
-		////    Unsharp mask algorithm by Torstein Hønsi 2003.
+		////    Unsharp mask algorithm by Torstein H?nsi 2003.
 		////             thoensi_at_netcom_dot_no.
 		////               Please leave this notice.
 		////
