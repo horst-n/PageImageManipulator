@@ -23,14 +23,18 @@ A complete list of all methods and actions can be found here: http://processwire
 
 ### Version history
 
-#### 0.0.8 
+#### 0.0.9
+
++ fixed issue with pimSave, added a check if DIB was loaded, and if not do it.
+
+#### 0.0.8
 
 + added enhanced support for Thumbnails module, including permanent storage for CropRectangleCoords and params
 + fixed / rewritten all bg-color stuff to support rgba alpha channel
 + fixed a E-Notice with IPTC prepare
 + changed the params of method resize, width, height to be the same like in new ImageSizer, ($sharpen can have value 'none') Sorry for breaking compatibility!
 
-#### 0.0.5 
+#### 0.0.5
 
 + added method canvas
 + added method unsharpMask
