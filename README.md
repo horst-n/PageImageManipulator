@@ -23,6 +23,10 @@ A complete list of all methods and actions can be found here: http://processwire
 
 ### Version history
 
+#### 0.1.0
+
++ added method getPimVariations()
+
 #### 0.0.9
 
 + fixed issue with pimSave, added a check if DIB was loaded, and if not do it.

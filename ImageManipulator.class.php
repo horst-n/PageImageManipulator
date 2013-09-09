@@ -14,7 +14,7 @@
 class ImageManipulator extends Wire {
 
     // must be identical with the module version
-		protected $version = 9;
+		protected $version = 10;
 
 	// information of source imagefile
 
@@ -780,7 +780,42 @@ class ImageManipulator extends Wire {
 					@unlink($directory . $file->getFilename());
 				}
 			}
-	   }
+		}
+
+
+		public function getPimVariations() {
+			if('page' != $this->entryItem) {
+				throw new WireException("This PageImageManipulator-Instance is not of type pageimage! ({$this->entryItem})");
+				return;
+			}
+			if(!is_null($this->variations)) return $this->variations;
+
+			$variations = new Pageimages($this->pageimage->pagefiles->page);
+
+			$basename = $this->pageimage->basename();
+			$directory = str_replace($basename, '', $this->pageimage->filename());
+			$p = pathinfo($directory . $basename);
+			$basename = $p['filename'];
+			$re = '/^pim_.*?' . $basename . '.*?' . '\.(gif|jpg|png)' . '$/';
+			// iterate through directory and check all files beginning with 'pim_'
+			// and include $basename, regardless which filetype: gif, jpg, png
+			$dir = new DirectoryIterator($directory);
+			foreach($dir as $file) {
+				if($file->isDir() || $file->isDot()) continue;
+				if(preg_match($re, $file->getFilename())!==1) {
+					continue;
+				}
+				$pageimage = clone $this->pageimage;
+				$pathname = $file->getPathname();
+				if(DIRECTORY_SEPARATOR != '/') $pathname = str_replace(DIRECTORY_SEPARATOR, '/', $pathname);
+				$pageimage->setFilename($pathname);
+				$pageimage->setOriginal($this->pageimage);
+				$variations->add($pageimage);
+			}
+
+			$this->variations = $variations;
+			return $variations;
+		}
 
 
 
