@@ -24,7 +24,7 @@ class PageImageManipulator extends WireData implements Module {        // Config
 	static public function getModuleInfo() {
 		return array(
 			'title'		=> 'Page Image Manipulator',
-			'version'	=> 10,
+			'version'	=> 11,
 			'summary'	=> 'This module provide basic Imagemanipulations for Pageimages and Imagefiles',
 			'author'	=> 'horst',
 			'href'		=> 'http://mods.pw/5E',
@@ -46,7 +46,44 @@ class PageImageManipulator extends WireData implements Module {        // Config
 	 */
 	public function init() {
 		$this->addHook('Pageimage::pimLoad', $this, 'getPageImageManipulator');
+		$this->addHook('Pageimage::isVariation', $this, 'HookIsVariationPim');
 	}
+
+
+
+	/**
+	 * add pim_* variations to pageimage-variation-collection,
+	 * - e.g. this is calle before an original image gets deleted, so that all its variations get swiped too!
+	 */
+	public function HookIsVariationPim($event) {
+		$variationName = basename($event->arguments[0]);
+		if('pim_'!=substr($variationName,0,4) || false!==$event->return) {
+			return $event->return;
+		}
+		// ok, it's our part
+		$pageimage = $event->object;                                         // get the pageimage
+		$basename = basename($pageimage->name, '.' . $pageimage->ext);       // basename of pageimage
+		$re = '/^pim_.*?' . $basename . '.*?' . '\.(gif|jpg|png)' . '$/';    // regexp to identify if it's a valid pim_variation
+		if(preg_match($re, $variationName)) {
+			// we have a match, now return array with imageinfo (the following rows are taken from original method Pageimage::isVariation(), only regexp is modified)
+			$re2 = 	'/^pim_.*?' . $basename . '\.' .		// pim_(prefix)_myfile.
+				'(\d+)x(\d+)' .								// 50x50
+				'([pd]\d+x\d+|[a-z]{1,2})?' . 				// nw or p30x40 or d30x40
+				'\.(gif|jpg|jpeg|png)' . 					// .ext
+				'$/';
+			preg_match($re2, $variationName, $matches);
+			$info = array(
+				'original' => $basename . '.' . $pageimage->ext,
+				'width' => $matches[1],
+				'height' => $matches[2],
+				'crop' => (isset($matches[3]) ? $matches[3] : '')
+			);
+			$event->return = $info;
+			return $event->return;
+		}
+		return false;
+	}
+
 
 
 	/**
