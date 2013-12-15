@@ -74,8 +74,8 @@ class PageImageManipulator extends WireData implements Module {        // Config
 			preg_match($re2, $variationName, $matches);
 			$info = array(
 				'original' => $basename . '.' . $pageimage->ext,
-				'width' => $matches[1],
-				'height' => $matches[2],
+				'width' => (isset($matches[1]) ? $matches[1] : ''),
+				'height' => (isset($matches[2]) ? $matches[2] : ''),
 				'crop' => (isset($matches[3]) ? $matches[3] : '')
 			);
 			$event->return = $info;
