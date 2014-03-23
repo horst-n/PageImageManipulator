@@ -1041,17 +1041,20 @@ class ImageManipulator extends Wire {
 		}
 
 
-		public function width($dst_width, $sharpen_mode='soft') {
+		public function width($dst_width, $sharpen_mode=null) {
 			return $this->resize($dst_width, 0, $sharpen_mode);
 		}
 
 
-		public function height($dst_height, $sharpen_mode='soft') {
+		public function height($dst_height, $sharpen_mode=null) {
 			return $this->resize(0, $dst_height, $sharpen_mode);
 		}
 
 
-		public function sharpen($mode='soft') {
+		public function sharpen($mode=null) {
+			if(null===$mode) {
+				$mode = $this->sharpening;
+			}
 			if($this->bypassOperations || 'none'==$mode) {
 				return $this;
 			}
