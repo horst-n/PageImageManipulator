@@ -23,6 +23,10 @@ A complete list of all methods and actions can be found here: http://processwire
 
 ### Version history
 
+#### 0.1.2
+
++ added support for sharpening-value 'none'
+
 #### 0.1.1
 
 + added a hook that add pim_* variations to pageimage-variation-collection
