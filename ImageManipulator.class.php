@@ -14,7 +14,7 @@
 class ImageManipulator extends Wire {
 
     // must be identical with the module version
-		protected $version = 11;
+		protected $version = 12;
 
 	// information of source imagefile
 
@@ -168,7 +168,7 @@ class ImageManipulator extends Wire {
 			'se' => 'southeast',
 		);
 
-        protected $validIptcTags = array('005','007','010','012','015','020','022','025','030','035','037','038','040','045','047','050','055','060','062','063','065','070','075','080','085','090','092','095','100','101','103','105','110','115','116','118','120','121','122','130','131','135','150','199','209','210','211','212','213','214','215','216','217');
+		protected $validIptcTags = array('005','007','010','012','015','020','022','025','030','035','037','038','040','045','047','050','055','060','062','063','065','070','075','080','085','090','092','095','100','101','103','105','110','115','116','118','120','121','122','130','131','135','150','199','209','210','211','212','213','214','215','216','217');
 
 		protected $isOriginal;
 
@@ -539,12 +539,12 @@ class ImageManipulator extends Wire {
 						if(is_array($value) && count($value)===3) {
 							$ret = $value;
 						}
-						elseif(is_string($value) && in_array(strtolower($value), array('soft','medium','strong','multistep'))) {
+						elseif(is_string($value) && in_array(strtolower($value), array('none','soft','medium','strong','multistep'))) {
 							$ret = strtolower($value);
 						}
 						else {
 							// TODO 2 -c errorhandling : create ErrorLog-Entry
-							$ret = in_array($this->getDefaultOption($key), array('soft','medium','strong','multistep')) ? $this->getDefaultOption($key) : 'soft';
+							$ret = in_array($this->getDefaultOption($key), array('none','soft','medium','strong','multistep')) ? $this->getDefaultOption($key) : 'soft';
 						}
 						break;
 
@@ -1012,7 +1012,7 @@ class ImageManipulator extends Wire {
 		}
 
 
-		public function resize($dst_width=0, $dst_height=0, $sharpen_mode='soft') {
+		public function resize($dst_width=0, $dst_height=0, $sharpen_mode=null {
 			if($this->bypassOperations) {
 				return $this;
 			}
@@ -1020,6 +1020,7 @@ class ImageManipulator extends Wire {
 				throw new WireException("Cannot load the MemoryImage!");
 				return false;
 			}
+			$sharpen_mode = is_string($sharpen_mode) && in_array($sharpen_mode, array('none', 'soft', 'medium', 'strong', 'multistep')) ? $sharpen_mode : $this->sharpening;
  			$dst_height = $dst_height===0 ? ceil( ($dst_width / imagesx($im)) * imagesy($im) ) : $dst_height;
  			$dst_width = $dst_width===0 ? ceil( ($dst_height / imagesy($im)) * imagesx($im) ) : $dst_width;
 			$im2 = $this->createTruecolor($dst_width, $dst_height);
@@ -1174,7 +1175,7 @@ class ImageManipulator extends Wire {
 		////
 		////                  p h p U n s h a r p M a s k
 		////
-		////    Unsharp mask algorithm by Torstein H?nsi 2003.
+		////    Unsharp mask algorithm by Torstein Hoensi 2003.
 		////             thoensi_at_netcom_dot_no.
 		////               Please leave this notice.
 		////
