@@ -1012,7 +1012,7 @@ class ImageManipulator extends Wire {
 		}
 
 
-		public function resize($dst_width=0, $dst_height=0, $sharpen_mode=null {
+		public function resize($dst_width=0, $dst_height=0, $sharpen_mode=null) {
 			if($this->bypassOperations) {
 				return $this;
 			}
