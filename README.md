@@ -1,4 +1,4 @@
-# Page Image Manipulator beta for ProcessWire2.3+
+# PageImage Manipulator beta for ProcessWire2.3+
 
 This module provide basic Imagemanipulations for PageImages and Imagefiles
 
