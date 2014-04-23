@@ -23,6 +23,12 @@ A complete list of all methods and actions can be found here: http://processwire
 
 ### Version history
 
+#### 0.1.3
+
++ fixed a bug with ignoring outputFormat when send as $options with method pimLoad found by @titanium
++ added support for php versions with buggy GD-lib for sharpening and unsharpMask
++ added support for the coming module PageimageNamingScheme into pimVariations()
+
 #### 0.1.2
 
 + added support for sharpening-value 'none'
