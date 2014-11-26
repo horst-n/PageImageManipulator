@@ -1,4 +1,4 @@
-# PageImage Manipulator beta for ProcessWire2.3+
+# PageImage Manipulator beta for ProcessWire 2.3+
 
 This module provide basic Imagemanipulations for PageImages and Imagefiles
 
@@ -22,6 +22,12 @@ A complete list of all methods and actions can be found here: http://processwire
 
 
 ### Version history
+
+#### 0.1.4
+
++ fixed a bug regarding permission "image-crop" when working together with Thumbnails/CropImage module
+  (this needs further investigation, here it is a quick solution to stop the error
+   https://processwire.com/talk/topic/4264-release-page-image-manipulator/page-6#entry81356)
 
 #### 0.1.3
 

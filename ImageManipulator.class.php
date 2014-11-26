@@ -14,7 +14,7 @@
 class ImageManipulator extends Wire {
 
     // must be identical with the module version
-        protected $version = 13;
+        protected $version = 14;
 
     // information of source imagefile
 
@@ -248,12 +248,16 @@ class ImageManipulator extends Wire {
             sort($this->propertyNames);
 
             // check if we can be used to boost the thumbnail module, - is it installed?
-            if(true === ($this->thumbnailBoost = (bool)wire('modules')->isInstalled('ProcessCropImage'))) {
-                // now check that at least the minimum version number of ProcessCropImage is installed:
-                $needed = '1.0.2';
-                $a = wire('modules')->get('ProcessCropImage')->getModuleInfo();
-                $actual = preg_replace('/(\d)(?=\d)/', '$1.', str_pad("{$a['version']}", 3, "0", STR_PAD_LEFT));
-                $this->thumbnailBoost = version_compare($actual, $needed, '<') ? false : true;
+            if(!wire('user')->hasPermission('image-crop')) {
+                $this->thumbnailBoost = false;
+            } else {
+                if(true === ($this->thumbnailBoost = (bool)wire('modules')->isInstalled('ProcessCropImage'))) {
+                    // now check that at least the minimum version number of ProcessCropImage is installed:
+                    $needed = '1.0.2';
+                    $a = wire('modules')->get('ProcessCropImage')->getModuleInfo();
+                    $actual = preg_replace('/(\d)(?=\d)/', '$1.', str_pad("{$a['version']}", 3, "0", STR_PAD_LEFT));
+                    $this->thumbnailBoost = version_compare($actual, $needed, '<') ? false : true;
+                }
             }
 
             // merging all options: classdefaults, global custom values from config.php and instance-options
