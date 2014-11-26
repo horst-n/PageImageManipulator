@@ -25,7 +25,7 @@ A complete list of all methods and actions can be found here: http://processwire
 
 #### 0.1.4
 
-+ fixed a bug regarding permission "image-crop" when working together with Thumbnails/CropImage module
++ fixed a bug regarding permission "image-crop" when working together with Thumbnails/CropImage module found by @Pete
   (this needs further investigation, here it is a quick solution to stop the error
    https://processwire.com/talk/topic/4264-release-page-image-manipulator/page-6#entry81356)
 
