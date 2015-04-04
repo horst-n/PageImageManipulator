@@ -23,6 +23,11 @@ A complete list of all methods and actions can be found here: http://processwire
 
 ### Version history
 
+#### 0.1.5
+
++ fixed a bug found by @rot: the modue was not set to singular in the module header, 
+   https://processwire.com/talk/topic/4264-release-page-image-manipulator/page-8#entry92006
+
 #### 0.1.4
 
 + fixed a bug regarding permission "image-crop" when working together with Thumbnails/CropImage module found by @Pete

@@ -14,7 +14,7 @@
 class ImageManipulator extends Wire {
 
     // must be identical with the module version
-        protected $version = 14;
+        protected $version = 15;
 
     // information of source imagefile
 
