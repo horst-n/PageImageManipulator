@@ -23,9 +23,17 @@ A complete list of all methods and actions can be found here: http://processwire
 
 ### Version history
 
+#### 0.2.0 / 0.2.6
+
++ released Pim2 to support PW 2.6+ with it's new naming scheme. With new sites under PW 2.6+ please
+   use directly ->pim2Load() instead of the old ->pimLoad(). If you need to upgrade on existing sites
+   with already lots of images, please refer to this forum post:
+   https://processwire.com/talk/topic/9982-page-image-manipulator-2/
+
+
 #### 0.1.5
 
-+ fixed a bug found by @rot: the modue was not set to singular in the module header, 
++ fixed a bug found by @rot: the modue was not set to singular in the module header,
    https://processwire.com/talk/topic/4264-release-page-image-manipulator/page-8#entry92006
 
 #### 0.1.4
