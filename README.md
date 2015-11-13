@@ -1,4 +1,4 @@
-# PageImage Manipulator beta for ProcessWire 2.3+
+# PageImage Manipulator beta for ProcessWire 2.3+ and Pageimage Manipulator 2 for PW 2.5.11+
 
 This module provide basic Imagemanipulations for PageImages and Imagefiles
 
@@ -22,6 +22,12 @@ A complete list of all methods and actions can be found here: http://processwire
 
 
 ### Version history
+
+#### 0.2.7
+
++ Pim2 fixed a bug with naming scheme of Pageimage Variationnames, a missing dot that prevented PW from detecting the variations
++ Pim2 now uses wireChmod on save.
+
 
 #### 0.2.0 / 0.2.6
 

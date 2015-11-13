@@ -1,9 +1,12 @@
 <?php
 
+// version 27: now uses wireChmod() on save()
+
+
 class ImageManipulator02 extends Wire {
 
     // must be identical with the module version
-        protected $version = 26;
+        protected $version = 27;
 
     // information of source imagefile
 
@@ -707,7 +710,7 @@ class ImageManipulator02 extends Wire {
                     if(is_file($dest)) @unlink($dest);
                     return false;
                 }
-
+                wireChmod($dest);
                 @unlink($targetFilename); // if it exists
                 if(!rename($dest, $targetFilename)) {
                     return false;
@@ -732,9 +735,11 @@ class ImageManipulator02 extends Wire {
                     }
                 }
             }
+            wireChmod($targetFilename);
 
 //            $this->loadImageInfo();  // this is from ImageResizer, don't know if we can use this here
 //            $this->modified = true;  // this is from ImageResizer, don't know if we can use this here
+
 
             if('page'==$this->entryItem) {
                 $pageimage = clone $this->pageimage;

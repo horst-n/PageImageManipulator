@@ -18,7 +18,7 @@ class PageImageManipulator02 extends WireData implements Module {        // Conf
     static public function getModuleInfo() {
         return array(
             'title'      => 'Page Image Manipulator 2',
-            'version'    => 26,
+            'version'    => 27,
             'summary'    => 'This module provide basic API Imagemanipulations for the new naming scheme (PW 2.6)!',
             'author'     => 'horst',
             'href'       => 'http://mods.pw/5E',
@@ -116,16 +116,16 @@ class PageImageManipulator02 extends WireData implements Module {        // Conf
             $prefix = substr(md5($pageimage->filename),0,8);
         }
         $prefix = wire('sanitizer')->pageName(trim(trim($prefix),'_'));
-
         // for new naming scheme since PW 2.5.11
         $suffix = str_replace('-', '', $prefix);
         $suffix = "-pim2-{$suffix}";
+        if (false === strpos($p['filename'], '.')) $suffix = '.' . $suffix;
 
         if(!in_array(strtolower($outputFormat), array('gif','png','jpg'))) {
             $outputFormat = $p['extension'];
         }
         $outputFormat = strtolower($outputFormat);
-        if(empty($targetFilename)) {
+        if (empty($targetFilename)) {
             #$targetFilename = $p['dirname'] .'/pim_'. $prefix .'_'. $p['filename'] .'.'. $outputFormat;
             $targetFilename = $p['dirname'] . "/" . $p['filename'] . $suffix . "." . $outputFormat;
         }
