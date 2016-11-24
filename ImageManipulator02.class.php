@@ -788,12 +788,12 @@ class ImageManipulator02 extends Wire {
         }
 
 
-        public function getPimVariations() {
+        public function getPimVariations($forceRefresh = true) {
             if ('page' != $this->entryItem) {
                 throw new WireException("This PageImageManipulator02-Instance is not of type pageimage! ({$this->entryItem})");
                 return;
             }
-            if (!is_null($this->variations)) return $this->variations;
+            if (!is_null($this->variations) && !$forceRefresh) return $this->variations;
             $this->variations = $this->pageimage->getVariations(array('suffix' => 'pim2'));
             return $this->variations;
         }

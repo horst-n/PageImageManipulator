@@ -23,6 +23,12 @@ A complete list of all methods and actions can be found here: http://processwire
 
 ### Version history
 
+#### 0.2.8
+
++ Pim2 added a switch to getPimVariations() to refresh the cached array, default = always refresh, passing a boolean false uses the cached version.
+   Many thanks to CaelanStewart! (see: https://processwire.com/talk/topic/4264-page-image-manipulator-1/?page=9#comment-133357)
+
+
 #### 0.2.7
 
 + Pim2 fixed a bug with naming scheme of Pageimage Variationnames, a missing dot that prevented PW from detecting the variations

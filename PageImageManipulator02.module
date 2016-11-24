@@ -17,11 +17,11 @@ class PageImageManipulator02 extends WireData implements Module {        // Conf
 
     static public function getModuleInfo() {
         return array(
-            'title'      => 'Page Image Manipulator 2',
-            'version'    => 27,
-            'summary'    => 'This module provide basic API Imagemanipulations for the new naming scheme (PW 2.6)!',
+            'title'      => 'Pageimage Manipulator 2',
+            'version'    => '0.2.8',
+            'summary'    => 'This module provide basic API Imagemanipulations for the new naming scheme (PW 2.6+)!',
             'author'     => 'horst',
-            'href'       => 'http://mods.pw/5E',
+            'href'       => 'https://processwire.com/talk/topic/4264-page-image-manipulator-1/',
             'singular'   => true,
             'autoload'   => true,
             'requires'   => 'ProcessWire>=2.5.11'
