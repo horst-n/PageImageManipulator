@@ -24,7 +24,7 @@ class PageImageManipulator extends WireData implements Module {        // Config
     static public function getModuleInfo() {
         return array(
             'title'      => 'Pageimage Manipulator 1',
-            'version'    => '0.2.3',
+            'version'    => 24,
             'summary'    => 'This module provide basic image manipulations for pageimages and imagefiles',
             'author'     => 'horst',
             'href'       => 'https://processwire.com/talk/topic/4264-page-image-manipulator-1/',

@@ -23,6 +23,12 @@ A complete list of all methods and actions can be found here: http://processwire
 
 ### Version history
 
+
+#### 0.2.9 / 0.2.4
+
++ corrected version numbers
+
+
 #### 0.2.8
 
 + Pim2 added a switch to getPimVariations() to refresh the cached array, default = always refresh, passing a boolean false uses the cached version.
