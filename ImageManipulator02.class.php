@@ -522,7 +522,7 @@ class ImageManipulator02 extends Wire {
                             // TODO 2 -c errorhandling : create ErrorLog-Entry
                             $ret = $this->getDefaultOption($key);
                             if(!is_bool($ret)) {
-                                continue;
+                                break;
                             }
                         }
                         break;
@@ -2349,10 +2349,10 @@ class ImageManipulator02 extends Wire {
                 if(isset($common_colors[strtolower($value)])) {
                     $value = $common_colors[strtolower($value)];
                 }
-                if($value{0} == '#') { //case of #nnnnnn or #nnn
+                if(substr($value, 0, 1) == '#') { //case of #nnnnnn or #nnn
                     $c = strtoupper($value);
                     if(strlen($c) == 4) { // Turn #RGB into #RRGGBB
-                        $c = "#" . $c{1} . $c{1} . $c{2} . $c{2} . $c{3} . $c{3};
+                        $c = "#" . substr($c, 0, 1) . substr($c, 0, 1) . substr($c, 1, 1) . substr($c, 1, 1) . substr($c, 2, 1) . substr($c, 2, 1);
                     }
                     $color = array();
                     $color[0]=hexdec(substr($c, 1, 2));
