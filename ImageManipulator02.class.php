@@ -1,12 +1,10 @@
 <?php
 
-// version 27: now uses wireChmod() on save()
-
 
 class ImageManipulator02 extends Wire {
 
     // must be identical with the module version
-        protected $version = 29;
+        protected $version = 30;
 
     // information of source imagefile
 
@@ -1742,6 +1740,187 @@ class ImageManipulator02 extends Wire {
                 throw new WireException("Error when trying to apply watermarkLogoTiled to MemoryImage.");
                 return false;
             }
+            return $this->imWrite($im) ? $this : false;
+        }
+
+
+
+
+        /**
+        * 2020-02-08 New Method, Horst
+        *
+        * @param mixed $text
+        * @param mixed $size
+        * @param mixed $position
+        *
+        *     NW - N - NE
+        *     |    |    |
+        *     W  - C -  E
+        *     |    |    |
+        *     SW - S - SE
+        *
+        * @param mixed $color
+        * @param mixed $bgcolor
+        * @param mixed $opacity
+        * @param mixed $padding
+        * @param mixed $trueTypeFont
+        * @return {ImageManipulator02|ImageManipulator02}
+        */
+        public function watermarkTextManu($text, $size=10, $position='center', $color=[255,255,255], $bgcolor='transparent', $opacity=70, $padding=2, $trueTypeFontAbsoluteFilepath=null) {
+            if($this->bypassOperations) {
+                return $this;
+            }
+            if(!is_string($text) || strlen($text)<1) {
+                throw new WireException("There is no text defined for watermarkText!");
+                return false;
+            }
+            $font = empty($trueTypeFontAbsoluteFilepath) ? dirname(__FILE__).'/freesansbold.ttf' : $trueTypeFontAbsoluteFilepath;
+            if(!$this->checkDiskfile($font, true)) {
+                throw new WireException("Cannot read the TrueTypeFile needed for watermarkText!");
+                return false;
+            }
+            if(false === ($im = $this->imLoad())) {
+                throw new WireException("Cannot load the MemoryImage!");
+                return false;
+            }
+
+            $lx = $width = imagesx($im);
+            $ly = $height = imagesy($im);
+
+            if(is_array($padding) && 4 == count($padding)) {
+                $paddingInnerX = (int)$padding[0];
+                $paddingInnerY = (int)$padding[1];
+                $paddingOuterX = (int)$padding[2];
+                $paddingOuterY = (int)$padding[3];
+            } elseif(is_array($padding) && 2 == count($padding)) {
+                $paddingInnerX = $paddingOuterX = (int)$padding[0];
+                $paddingInnerY = $paddingOuterY = (int)$padding[1];
+            } elseif(is_int($padding) && $padding >= 0 && $padding <= 25) {
+                $paddingInnerX = $paddingInnerY = $paddingOuterX = $paddingOuterY = $padding;
+            } else {
+                $paddingInnerX = $paddingInnerY = $paddingOuterX = $paddingOuterY = 2;
+            }
+            $paddingInnerX = $lx > $ly ? intval($ly / 100 * $paddingInnerX) : intval($lx / 100 * $paddingInnerX);
+            $paddingInnerY = $lx > $ly ? intval($ly / 100 * $paddingInnerY) : intval($lx / 100 * $paddingInnerY);
+            $paddingOuterX = $lx > $ly ? intval($ly / 100 * $paddingOuterX) : intval($lx / 100 * $paddingOuterX);
+            $paddingOuterY = $lx > $ly ? intval($ly / 100 * $paddingOuterY) : intval($lx / 100 * $paddingOuterY);
+
+            $size = !is_int($size) || $size < 1 || $size > 300 ? 10 : $size;
+            $position = !is_string($position) || (!in_array(strtolower($position), $this->positioningValues) && !in_array(strtolower($position), array_keys($this->positioningValues))) ? 'center' : strtolower($position);
+            $opacity = !is_int($opacity) || $opacity < 1 || $opacity > 100 ? 70 : $opacity;
+
+            // calculate textbox
+            $box = @imagettfbbox($size, 0, $font, $text);
+            $watermarkWidth = abs(abs($box[4] - $box[0]) + (2 * $paddingInnerX));
+            $watermarkHeight = abs(abs($box[5] - $box[1]) + (2 * $paddingInnerY)); // $box[3]
+//            while($height + (2 * $padding) >= $ly || $width + (2 * $padding) >= $lx) {
+//                if($size==1) {
+//                    throw new WireException("There is to much text for the selected output image dimensions in watermarkText!");
+//                    return false;
+//                }
+//                $size -= 1;
+//                $box = @imagettfbbox($size, 0, $font, $text);
+//                $width = abs($box[4] - $box[0]);
+//                $height = abs($box[5] - $box[1]);
+//            }
+            // now we should have text dimensions that fit into image dimensions or we have already returned false
+
+            // >>> create a textimage
+                $textImage = $this->createTruecolor($watermarkWidth, $watermarkHeight);
+                $useTransparent = is_string($bgcolor) && 'transparent' == $bgcolor;
+                if($useTransparent) $bgcolor = [0,0,0];
+                $bgcolor = $this->sanitizeColor($bgcolor, true);
+                $color_bg = @imagecolorallocate($textImage, $bgcolor[0], $bgcolor[1], $bgcolor[2]);
+                $color = $this->sanitizeColor($color, true);
+                $color_fg = @imagecolorallocate($textImage, $color[0], $color[1], $color[2]);
+                // put in the text
+                @imagefilledrectangle($textImage, 0, 0, $watermarkWidth, $watermarkHeight, $color_bg);
+                @imageantialias($textImage, false);
+                if($useTransparent) {
+                    @imagecolortransparent($textImage, $color_bg);
+                }
+                @imagettftext($textImage, $size, 0, $paddingInnerX, ($size + $paddingInnerY), $color_fg, $font, $text);
+            // <<< create a textimage
+
+            // calculate coordinates for position
+            switch($position) {
+                case 'nw':
+                case 'northwest':
+                    $posX = $paddingOuterX;
+                    $posY = $paddingOuterY;
+                    break;
+
+                case 'n':
+                case 'north':
+                    $posX = intval(($lx - $watermarkWidth) / 2);
+                    $posY = $paddingOuterY;
+                    break;
+
+                case 'ne':
+                case 'northeast':
+                    $posX = intval($lx - $watermarkWidth - $paddingOuterX);
+                    $posY = $paddingOuterY;
+                    break;
+
+
+                case 'w':
+                case 'west':
+                    $posX = $paddingOuterX;
+                    $posY = intval(($ly - $watermarkHeight) / 2);
+                    break;
+
+                case 'e':
+                case 'east':
+                    $posX = intval($lx - $watermarkWidth - $paddingOuterX);
+                    $posY = intval(($ly - $watermarkHeight) / 2);
+                    break;
+
+
+                case 'sw':
+                case 'southwest':
+                    $posX = $paddingOuterX;
+                    $posY = $ly - $paddingOuterY - $watermarkHeight;
+                    break;
+
+                case 's':
+                case 'south':
+                    $posX = intval(($lx - $watermarkWidth) / 2);
+                    $posY = $ly - $paddingOuterY - $watermarkHeight;
+                    break;
+
+                case 'se':
+                case 'southeast':
+                    $posX = intval($lx - $watermarkWidth - $paddingOuterX);
+                    $posY = $ly - $paddingOuterY - $watermarkHeight;
+                    break;
+
+
+                default:
+                    // center | center
+                    $posX = intval(($lx - $watermarkWidth) / 2);
+                    $posY = intval(($ly - $watermarkHeight) / 2);
+            }
+//mvd([
+//    $paddingInnerX,
+//    $paddingInnerY,
+//    $paddingOuterX,
+//    $paddingOuterY,
+//    $padding,
+//    $posX,
+//    $posY,
+//]); die('RIP');
+
+            // merge watermark into original
+            $res = @imagecopymerge($im, $textImage, $posX, $posY, 0, 0, $watermarkWidth, $watermarkHeight, $opacity);
+
+            // release memory images
+            @imagedestroy($textImage);
+            if(!$res || !$this->isResourceGd($im)) {
+                throw new WireException("Error when trying to apply a watermarkLogo to the MemoryImage.");
+                return false;
+            }
+
+            // write back resulting image
             return $this->imWrite($im) ? $this : false;
         }
 

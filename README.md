@@ -24,6 +24,11 @@ A complete list of all methods and actions can be found here: http://processwire
 ### Version history
 
 
+#### 0.3.0 / 0.2.4
+
++ added new method to Pim2: "watermarkTextManu". It lets you define: text, text-size, text-color, bg-color, position, inner-padding for x and y of textbox, outer-padding for x and y of textbox, a fullpath to a truetype font.
+
+
 #### 0.2.9 / 0.2.4
 
 + corrected version numbers
