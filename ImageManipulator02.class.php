@@ -1774,11 +1774,16 @@ class ImageManipulator02 extends Wire {
                 throw new WireException("There is no text defined for watermarkText!");
                 return false;
             }
-            $font = empty($trueTypeFontAbsoluteFilepath) ? dirname(__FILE__).'/freesansbold.ttf' : $trueTypeFontAbsoluteFilepath;
+            if(is_string($trueTypeFontAbsoluteFilepath) && is_readable($trueTypeFontAbsoluteFilepath)) {
+                $font = $trueTypeFontAbsoluteFilepath;
+            } else {
+                $font = dirname(__FILE__).'/freesansbold.ttf';
+            }
             if(!$this->checkDiskfile($font, true)) {
                 throw new WireException("Cannot read the TrueTypeFile needed for watermarkText!");
                 return false;
             }
+
             if(false === ($im = $this->imLoad())) {
                 throw new WireException("Cannot load the MemoryImage!");
                 return false;
@@ -1839,7 +1844,7 @@ class ImageManipulator02 extends Wire {
                 if($useTransparent) {
                     @imagecolortransparent($textImage, $color_bg);
                 }
-                @imagettftext($textImage, $size, 0, $paddingInnerX, ($size + $paddingInnerY), $color_fg, $font, $text);
+                @imagettftext($textImage, $size, 0, $paddingInnerX, intval($size + $paddingInnerY + intval($size / 5)), $color_fg, $font, $text);
             // <<< create a textimage
 
             // calculate coordinates for position
@@ -1900,15 +1905,7 @@ class ImageManipulator02 extends Wire {
                     $posX = intval(($lx - $watermarkWidth) / 2);
                     $posY = intval(($ly - $watermarkHeight) / 2);
             }
-//mvd([
-//    $paddingInnerX,
-//    $paddingInnerY,
-//    $paddingOuterX,
-//    $paddingOuterY,
-//    $padding,
-//    $posX,
-//    $posY,
-//]); die('RIP');
+
 
             // merge watermark into original
             $res = @imagecopymerge($im, $textImage, $posX, $posY, 0, 0, $watermarkWidth, $watermarkHeight, $opacity);
