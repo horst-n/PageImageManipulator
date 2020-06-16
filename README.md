@@ -24,6 +24,11 @@ A complete list of all methods and actions can be found here: http://processwire
 ### Version history
 
 
+#### 0.2.10 / 0.2.5
+
++ minor fix with outputformat extensions jpg and jpeg
+
+
 #### 0.2.9 / 0.2.4
 
 + corrected version numbers

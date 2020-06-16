@@ -6,7 +6,7 @@
 class ImageManipulator02 extends Wire {
 
     // must be identical with the module version
-        protected $version = 29;
+        protected $version = '0.2.10';
 
     // information of source imagefile
 
@@ -547,12 +547,16 @@ class ImageManipulator02 extends Wire {
                         break;
 
                     case 'outputFormat':
+                        // 2020-06-16: fix for two identical filenames, but one with extension jpg and one with jpeg
+                        if('jpg' == $value && 'jpeg' == $this->outputFormat) $value = 'jpeg';
+
                         if(is_int($value) && in_array($value,$this->supportedImageTypes)) {
                             $a = array_flip($this->supportedImageTypes);
                             $ret = $a[$value];
                         }
                         elseif(is_string($value) && in_array(strtolower($value),array_keys($this->supportedImageTypes))) {
-                            $ret = strtolower($value)=='jpeg' ? 'jpg' : strtolower($value);
+                            // 2020-06-16: fix for two identical filenames, but one with extension jpg and one with jpeg
+                            $ret = strtolower($value);
                         }
                         else {
                             $ret = strtolower(pathinfo($this->filename, PATHINFO_EXTENSION));
