@@ -27,6 +27,7 @@ A complete list of all methods and actions can be found here: http://processwire
 #### 0.2.10 / 0.2.5
 
 + minor fix with outputformat extensions jpg and jpeg
+   found by Crowdland Technology, (see: https://processwire.com/talk/topic/4264-page-image-manipulator-1/?do=findComment&comment=203143)
 
 
 #### 0.2.9 / 0.2.4
