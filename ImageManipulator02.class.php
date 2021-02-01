@@ -6,7 +6,7 @@
 class ImageManipulator02 extends Wire {
 
     // must be identical with the module version
-        protected $version = '0.2.10';
+        protected $version = '0.2.11';
 
     // information of source imagefile
 
@@ -80,6 +80,11 @@ class ImageManipulator02 extends Wire {
         protected $outputFormat;
 
         /**
+        * JPEGs saving with interlaced flag set or not
+        */
+        protected $interlace;
+
+        /**
         * color array rgb (or optional rgba) for BG-Color (0-255) 0,0,0 = black | 255,255,255 = white | 255,0,0 = red
         */
         protected $bgcolor = array(255, 255, 255, 0);
@@ -129,6 +134,7 @@ class ImageManipulator02 extends Wire {
             'bgcolor',
             'targetFilename',
             'outputFormat',
+            'interlace',
             'thumbnailColorizeCustom',
             'thumbnailCoordsPermanent'
         );
@@ -143,6 +149,7 @@ class ImageManipulator02 extends Wire {
             'bgcolor' => array(255, 255, 255, 0),
             'targetFilename' => null,
             'outputFormat' => null,
+            'interlace' => false,
             'thumbnailColorizeCustom' => array(0, 0, 0),
             'thumbnailCoordsPermanent' => false
         );
@@ -504,6 +511,7 @@ class ImageManipulator02 extends Wire {
                     case 'autoRotation':
                     case 'upscaling':
                     case 'cropping':
+                    case 'interlace':
                     case 'extendedImageinfo':
                     case 'thumbnailCoordsPermanent':
                         if(is_bool($value)) {
@@ -599,6 +607,7 @@ class ImageManipulator02 extends Wire {
         public function setSharpening($value)                { return $this->setOptions( array('sharpening'=>$value) ); }
         public function setTargetFilename($value)            { return $this->setOptions( array('targetFilename'=>$value) ); }
         public function setOutputFormat($value)              { return $this->setOptions( array('outputFormat'=>$value) ); }
+        public function setInterlace($value)                 { return $this->setOptions( array('interlace'=>$value) ); }
         public function setBgcolor($value)                   { return $this->setOptions( array('bgcolor'=>$value) ); }
         public function setThumbnailColorizeCustom($value)   { return $this->setOptions( array('thumbnailColorizeCustom'=>$value) ); }
 
@@ -624,6 +633,7 @@ class ImageManipulator02 extends Wire {
         public function getSharpening()                      { return $this->getOptions( 'sharpening' ); }
         public function getTargetFilename()                  { return $this->getOptions( 'targetFilename' ); }
         public function getOutputFormat()                    { return $this->getOptions( 'outputFormat' ); }
+        public function getInterlace()                       { return $this->getOptions( 'interlace' ); }
         public function getBgcolor()                         { return $this->getOptions( 'bgcolor' ); }
         public function getThumbnailColorizeCustom()         { return $this->getOptions( 'thumbnailColorizeCustom' ); }
 
@@ -704,6 +714,12 @@ class ImageManipulator02 extends Wire {
                         break;
                     case IMAGETYPE_JPEG:
                         imagealphablending($this->imDibDst, false);
+                        if($this->interlace) {
+                            if(0 == imageinterlace($this->imDibDst, 1)) {
+                                // log that setting the interlace bit has failed ?
+                                // ...
+                            }
+                        }
                         $result = imagejpeg($this->imDibDst, $dest, $this->quality);
                         break;
                 }

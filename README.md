@@ -24,6 +24,11 @@ A complete list of all methods and actions can be found here: http://processwire
 ### Version history
 
 
+#### 0.2.11 / 0.2.6
+
++ Pim2 added support for the interlace flag for jpeg fileformat
+
+
 #### 0.2.10 / 0.2.5
 
 + minor fix with outputformat extensions jpg and jpeg
