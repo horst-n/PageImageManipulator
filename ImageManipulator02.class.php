@@ -1,12 +1,13 @@
 <?php
 
+
 // version 27: now uses wireChmod() on save()
 
 
 class ImageManipulator02 extends Wire {
 
     // must be identical with the module version
-        protected $version = '0.2.11';
+        protected $version = '0.2.12';
 
     // information of source imagefile
 
@@ -520,10 +521,10 @@ class ImageManipulator02 extends Wire {
                         elseif(is_int($value)) {
                             $ret = $value===1 ? true : false;
                         }
-                        elseif(is_string($value) && in_array(strtolower($value), array('1','on','true','yes','y'))) {
+                        elseif(is_string($value) && strlen(trim($value)) && in_array(strtolower(trim($value)), array('1','on','true','yes','y'))) {
                             $ret = true;
                         }
-                        elseif(is_string($value) && in_array(strtolower($value), array('0','off','false','no','n'))) {
+                        elseif(is_string($value) && strlen(trim($value)) && in_array(strtolower(trim($value)), array('0','off','false','no','n'))) {
                             $ret = false;
                         }
                         else {
@@ -545,7 +546,7 @@ class ImageManipulator02 extends Wire {
                         if(is_array($value) && count($value)===3) {
                             $ret = $value;
                         }
-                        elseif(is_string($value) && in_array(strtolower($value), array('none','soft','medium','strong','multistep'))) {
+                        elseif(is_string($value) && strlen($value) && in_array(strtolower($value), array('none','soft','medium','strong','multistep'))) {
                             $ret = strtolower($value);
                         }
                         else {
@@ -562,7 +563,7 @@ class ImageManipulator02 extends Wire {
                             $a = array_flip($this->supportedImageTypes);
                             $ret = $a[$value];
                         }
-                        elseif(is_string($value) && in_array(strtolower($value),array_keys($this->supportedImageTypes))) {
+                        elseif(is_string($value) && strlen($value) && in_array(strtolower($value),array_keys($this->supportedImageTypes))) {
                             // 2020-06-16: fix for two identical filenames, but one with extension jpg and one with jpeg
                             $ret = strtolower($value);
                         }
@@ -650,7 +651,12 @@ class ImageManipulator02 extends Wire {
         * @param resource $var
         */
         public static function isResourceGd(&$var) {
-            return is_resource($var) && strtoupper(substr(get_resource_type($var),0,2))=='GD' ? true : false;
+            if(version_compare(PHP_VERSION, '8.0.0', '<')) {
+                return is_resource($var) && mb_strtoupper(substr(get_resource_type($var),0,2)) == 'GD';
+            } else {
+                // for PHP 8+ the check has changed to
+                return is_object($var) && ($var instanceof GdImage);
+            }
         }
 
 
@@ -829,7 +835,7 @@ class ImageManipulator02 extends Wire {
         private function imLoad($onlyLoad=false) {
             if($this->bypassOperations) return;
             if(!isset($this->dibIsLoaded) || $this->dibIsLoaded!==true) {
-                $this->imDibDst = @imagecreatefromstring( file_get_contents($this->filename) );
+                $this->imDibDst = imagecreatefromstring( file_get_contents($this->filename) );
                 $this->dibIsLoaded = $this->isResourceGd($this->imDibDst);
                 if($this->dibIsLoaded!==true) {
                     return false;
