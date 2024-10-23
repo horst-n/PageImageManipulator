@@ -25,8 +25,10 @@ A complete list of all methods and actions can be found here: http://processwire
 
 
 #### 0.2.11 / 0.2.6
-
-+ Pim2 added support for the interlace flag for jpeg fileformat
+    @date: 2024-10-23
+    fix: ->isResourceGd(&$var)
+    Now it returns true for a loaded dib on 'is_resource' and/or on 'is_object', of types GD
+    (is_resource seems to not work anymore with newer PHP 8.2+ versions)
 
 
 #### 0.2.10 / 0.2.5

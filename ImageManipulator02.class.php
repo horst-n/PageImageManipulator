@@ -1,13 +1,16 @@
 <?php
 
+/**
+* 2024-10-23    0.2.11      fix: ->isResourceGd(&$var),
+*                           now returns true for a loaded dip on is_resource and is_object of types GD !!
+*/
 
-// version 27: now uses wireChmod() on save()
 
 
 class ImageManipulator02 extends Wire {
 
     // must be identical with the module version
-        protected $version = '0.2.12';
+        protected $version = '0.2.11';
 
     // information of source imagefile
 
@@ -81,11 +84,6 @@ class ImageManipulator02 extends Wire {
         protected $outputFormat;
 
         /**
-        * JPEGs saving with interlaced flag set or not
-        */
-        protected $interlace;
-
-        /**
         * color array rgb (or optional rgba) for BG-Color (0-255) 0,0,0 = black | 255,255,255 = white | 255,0,0 = red
         */
         protected $bgcolor = array(255, 255, 255, 0);
@@ -135,7 +133,6 @@ class ImageManipulator02 extends Wire {
             'bgcolor',
             'targetFilename',
             'outputFormat',
-            'interlace',
             'thumbnailColorizeCustom',
             'thumbnailCoordsPermanent'
         );
@@ -150,7 +147,6 @@ class ImageManipulator02 extends Wire {
             'bgcolor' => array(255, 255, 255, 0),
             'targetFilename' => null,
             'outputFormat' => null,
-            'interlace' => false,
             'thumbnailColorizeCustom' => array(0, 0, 0),
             'thumbnailCoordsPermanent' => false
         );
@@ -512,7 +508,6 @@ class ImageManipulator02 extends Wire {
                     case 'autoRotation':
                     case 'upscaling':
                     case 'cropping':
-                    case 'interlace':
                     case 'extendedImageinfo':
                     case 'thumbnailCoordsPermanent':
                         if(is_bool($value)) {
@@ -521,10 +516,10 @@ class ImageManipulator02 extends Wire {
                         elseif(is_int($value)) {
                             $ret = $value===1 ? true : false;
                         }
-                        elseif(is_string($value) && strlen(trim($value)) && in_array(strtolower(trim($value)), array('1','on','true','yes','y'))) {
+                        elseif(is_string($value) && in_array(strtolower($value), array('1','on','true','yes','y'))) {
                             $ret = true;
                         }
-                        elseif(is_string($value) && strlen(trim($value)) && in_array(strtolower(trim($value)), array('0','off','false','no','n'))) {
+                        elseif(is_string($value) && in_array(strtolower($value), array('0','off','false','no','n'))) {
                             $ret = false;
                         }
                         else {
@@ -546,7 +541,7 @@ class ImageManipulator02 extends Wire {
                         if(is_array($value) && count($value)===3) {
                             $ret = $value;
                         }
-                        elseif(is_string($value) && strlen($value) && in_array(strtolower($value), array('none','soft','medium','strong','multistep'))) {
+                        elseif(is_string($value) && in_array(strtolower($value), array('none','soft','medium','strong','multistep'))) {
                             $ret = strtolower($value);
                         }
                         else {
@@ -563,7 +558,7 @@ class ImageManipulator02 extends Wire {
                             $a = array_flip($this->supportedImageTypes);
                             $ret = $a[$value];
                         }
-                        elseif(is_string($value) && strlen($value) && in_array(strtolower($value),array_keys($this->supportedImageTypes))) {
+                        elseif(is_string($value) && in_array(strtolower($value),array_keys($this->supportedImageTypes))) {
                             // 2020-06-16: fix for two identical filenames, but one with extension jpg and one with jpeg
                             $ret = strtolower($value);
                         }
@@ -608,7 +603,6 @@ class ImageManipulator02 extends Wire {
         public function setSharpening($value)                { return $this->setOptions( array('sharpening'=>$value) ); }
         public function setTargetFilename($value)            { return $this->setOptions( array('targetFilename'=>$value) ); }
         public function setOutputFormat($value)              { return $this->setOptions( array('outputFormat'=>$value) ); }
-        public function setInterlace($value)                 { return $this->setOptions( array('interlace'=>$value) ); }
         public function setBgcolor($value)                   { return $this->setOptions( array('bgcolor'=>$value) ); }
         public function setThumbnailColorizeCustom($value)   { return $this->setOptions( array('thumbnailColorizeCustom'=>$value) ); }
 
@@ -634,7 +628,6 @@ class ImageManipulator02 extends Wire {
         public function getSharpening()                      { return $this->getOptions( 'sharpening' ); }
         public function getTargetFilename()                  { return $this->getOptions( 'targetFilename' ); }
         public function getOutputFormat()                    { return $this->getOptions( 'outputFormat' ); }
-        public function getInterlace()                       { return $this->getOptions( 'interlace' ); }
         public function getBgcolor()                         { return $this->getOptions( 'bgcolor' ); }
         public function getThumbnailColorizeCustom()         { return $this->getOptions( 'thumbnailColorizeCustom' ); }
 
@@ -651,14 +644,14 @@ class ImageManipulator02 extends Wire {
         * @param resource $var
         */
         public static function isResourceGd(&$var) {
-            if(version_compare(PHP_VERSION, '8.0.0', '<')) {
-                return is_resource($var) && mb_strtoupper(substr(get_resource_type($var),0,2)) == 'GD';
+            if (is_resource($var) && strtoupper(substr(get_resource_type($var), 0, 2)) == 'GD') {
+                return true;
+            } else if (is_object($var) && $var instanceof GdImage) {
+                return true;
             } else {
-                // for PHP 8+ the check has changed to
-                return is_object($var) && ($var instanceof GdImage);
+                return false;
             }
         }
-
 
         public function pimSave($outputFormat=null) {
             if('memory'==$this->entryItem) {
@@ -720,12 +713,6 @@ class ImageManipulator02 extends Wire {
                         break;
                     case IMAGETYPE_JPEG:
                         imagealphablending($this->imDibDst, false);
-                        if($this->interlace) {
-                            if(0 == imageinterlace($this->imDibDst, 1)) {
-                                // log that setting the interlace bit has failed ?
-                                // ...
-                            }
-                        }
                         $result = imagejpeg($this->imDibDst, $dest, $this->quality);
                         break;
                 }
@@ -835,7 +822,7 @@ class ImageManipulator02 extends Wire {
         private function imLoad($onlyLoad=false) {
             if($this->bypassOperations) return;
             if(!isset($this->dibIsLoaded) || $this->dibIsLoaded!==true) {
-                $this->imDibDst = imagecreatefromstring( file_get_contents($this->filename) );
+                $this->imDibDst = @imagecreatefromstring( file_get_contents($this->filename) );
                 $this->dibIsLoaded = $this->isResourceGd($this->imDibDst);
                 if($this->dibIsLoaded!==true) {
                     return false;
@@ -1649,6 +1636,7 @@ class ImageManipulator02 extends Wire {
                 throw new WireException("Cannot read the pngAlphaImageFile!");
                 return false;
             }
+
             $wm = @imagecreatefrompng($watermarkfile);
             if(!$this->isResourceGd($wm)) {
                 throw new WireException("Cannot load the pngAlphaImage into memory!");
