@@ -24,12 +24,12 @@ A complete list of all methods and actions can be found here: http://processwire
 ### Version history
 
 
-#### 0.2.12 / 0.2.7
+#### 0.3.1 / 0.3.1
     @date: 2024-10-23
     fix: $outputFormat in PageImageManipulator02.module now also uses is_null($outputFormat) and changed str_tolower() to mb_strtolower()
 
 
-#### 0.2.11 / 0.2.6
+#### 0.3.0 / 0.3.0
     @date: 2024-10-23
     fix: ->isResourceGd(&$var)
     Now it returns true for a loaded dib on 'is_resource' and/or on 'is_object', of types GD

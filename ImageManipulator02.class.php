@@ -1,16 +1,10 @@
 <?php
 
-/**
-* 2024-10-23    0.2.11      fix: ->isResourceGd(&$var),
-*                           now returns true for a loaded dip on is_resource and is_object of types GD !!
-*/
-
-
 
 class ImageManipulator02 extends Wire {
 
     // must be identical with the module version
-        protected $version = '0.2.12';
+        protected $version = '0.3.1';
 
     // information of source imagefile
 
