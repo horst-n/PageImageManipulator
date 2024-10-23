@@ -24,6 +24,11 @@ A complete list of all methods and actions can be found here: http://processwire
 ### Version history
 
 
+#### 0.2.12 / 0.2.7
+    @date: 2024-10-23
+    fix: $outputFormat in PageImageManipulator02.module now also uses is_null($outputFormat) and changed str_tolower() to mb_strtolower()
+
+
 #### 0.2.11 / 0.2.6
     @date: 2024-10-23
     fix: ->isResourceGd(&$var)

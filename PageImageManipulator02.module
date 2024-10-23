@@ -18,13 +18,13 @@ class PageImageManipulator02 extends WireData implements Module {        // Conf
     static public function getModuleInfo() {
         return array(
             'title'      => 'Pageimage Manipulator 2',
-            'version'    => '0.2.11',
+            'version'    => '0.2.12',
             'summary'    => 'This module provide basic API Imagemanipulations for the new naming scheme (PW 2.6+)!',
             'author'     => 'horst',
             'href'       => 'https://processwire.com/talk/topic/4264-page-image-manipulator-1/',
             'singular'   => true,
             'autoload'   => true,
-            'requires'   => 'ProcessWire>=2.5.11'
+            'requires'   => 'ProcessWire>=2.6.0'
         );
     }
 
@@ -69,6 +69,7 @@ class PageImageManipulator02 extends WireData implements Module {        // Conf
         $override = false;
         $outputFormat = null;
         $targetFilename = null;
+
         if(count($event->arguments)===1 && is_string($event->arguments[0])) {
             // we only have the prefix
             $prefix = $event->arguments[0];
@@ -121,10 +122,10 @@ class PageImageManipulator02 extends WireData implements Module {        // Conf
         $suffix = "-pim2-{$suffix}";
         if (false === strpos($p['filename'], '.')) $suffix = '.' . $suffix;
 
-        if(!in_array(strtolower($outputFormat), array('gif','png','jpg'))) {
+        if(is_null($outputFormat) || !in_array(mb_strtolower($outputFormat), array('gif','png','jpg'))) {
             $outputFormat = $p['extension'];
         }
-        $outputFormat = strtolower($outputFormat);
+        $outputFormat = mb_strtolower($outputFormat);
         if (empty($targetFilename)) {
             #$targetFilename = $p['dirname'] .'/pim_'. $prefix .'_'. $p['filename'] .'.'. $outputFormat;
             $targetFilename = $p['dirname'] . "/" . $p['filename'] . $suffix . "." . $outputFormat;
